@@ -253,6 +253,13 @@ function generateBGM(): Float32Array {
   return samples;
 }
 
+// ─── Mute settings ──────────────────────────────────────────────────────────
+export let sfxMuted = false;
+export let musicMuted = false;
+
+export function setSfxMuted(val: boolean) { sfxMuted = val; }
+export function setMusicMuted(val: boolean) { musicMuted = val; }
+
 // Pre-generate and cache sounds
 const soundCache: Record<string, Audio.Sound | null> = {};
 const soundUris: Record<string, string> = {};
@@ -287,6 +294,7 @@ export async function preloadSounds(): Promise<void> {
 }
 
 export async function playSfx(type: string): Promise<void> {
+  if (sfxMuted) return;
   try {
     const uri = soundUris[type];
     if (!uri) return;
@@ -306,7 +314,7 @@ export async function playSfx(type: string): Promise<void> {
 }
 
 export async function startBGM(): Promise<void> {
-  if (bgmPlaying || !bgmUri) return;
+  if (bgmPlaying || !bgmUri || musicMuted) return;
   try {
     if (bgmSound) {
       await bgmSound.unloadAsync().catch(() => {});

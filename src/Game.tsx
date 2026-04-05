@@ -8,7 +8,8 @@ import {
   BOOSTERS, COSMETICS, BoosterType, CosmeticDef,
 } from "./engine";
 import { createRooms } from "./rooms";
-import { playSfx, preloadSounds, startBGM, stopBGM } from "./sound";
+import { playSfx, preloadSounds, startBGM, stopBGM, sfxMuted, musicMuted, setSfxMuted, setMusicMuted } from "./sound";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { loadSave, writeSave, SaveData } from "./storage";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
@@ -189,11 +190,31 @@ export default function Game() {
   const [picture, setPicture] = useState<SkPicture | null>(null);
   const [, forceUpdate] = useState(0);
   const [savedCoins, setSavedCoins] = useState(0);
+  const [isSfxMuted, setIsSfxMuted] = useState(false);
+  const [isMusicMuted, setIsMusicMuted] = useState(false);
 
   useEffect(() => {
     preloadSounds();
     loadSave().then(s => setSavedCoins(s.coins));
+    // Load audio settings
+    AsyncStorage.getItem("summit_sfx_muted").then(v => { if (v === "true") { setSfxMuted(true); setIsSfxMuted(true); } });
+    AsyncStorage.getItem("summit_music_muted").then(v => { if (v === "true") { setMusicMuted(true); setIsMusicMuted(true); } });
   }, []);
+
+  const toggleSfx = useCallback(() => {
+    const next = !sfxMuted;
+    setSfxMuted(next);
+    setIsSfxMuted(next);
+    AsyncStorage.setItem("summit_sfx_muted", String(next));
+  }, []);
+
+  const toggleMusic = useCallback(() => {
+    const next = !musicMuted;
+    setMusicMuted(next);
+    setIsMusicMuted(next);
+    AsyncStorage.setItem("summit_music_muted", String(next));
+    if (next) stopBGM(); else if (status === "playing") startBGM();
+  }, [status]);
 
   const sfxCallback = useCallback((type: string) => { playSfx(type); }, []);
 
@@ -306,6 +327,14 @@ export default function Game() {
           </View>
           <Text style={{ color: "#f1c40f", fontSize: 13, fontFamily: "monospace" }}>🪙 {savedCoins} coins</Text>
           <Text style={styles.hint}>Use controls below to move, jump, and dash</Text>
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 12 }}>
+            <TouchableOpacity onPress={toggleSfx} style={{ backgroundColor: isSfxMuted ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.08)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>
+              <Text style={{ color: isSfxMuted ? "#ef4444" : "#9ca3af", fontSize: 11, fontWeight: "bold", fontFamily: "monospace" }}>{isSfxMuted ? "🔇 SFX OFF" : "🔊 SFX ON"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleMusic} style={{ backgroundColor: isMusicMuted ? "rgba(239,68,68,0.2)" : "rgba(255,255,255,0.08)", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 }}>
+              <Text style={{ color: isMusicMuted ? "#ef4444" : "#9ca3af", fontSize: 11, fontWeight: "bold", fontFamily: "monospace" }}>{isMusicMuted ? "🔇 MUSIC OFF" : "🎵 MUSIC ON"}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
@@ -459,6 +488,14 @@ export default function Game() {
             <TouchableOpacity style={styles.shopMiniBtn} onPress={() => { setStatus("shop"); if (gs) gs.status = "shop"; stopBGM(); }} activeOpacity={0.6}>
               <Text style={{ color: "#f1c40f", fontSize: 10, fontWeight: "bold", fontFamily: "monospace" }}>🪙 SHOP</Text>
             </TouchableOpacity>
+            <View style={{ flexDirection: "row", gap: 6 }}>
+              <TouchableOpacity onPress={toggleSfx} activeOpacity={0.6} style={{ padding: 4 }}>
+                <Text style={{ fontSize: 16 }}>{isSfxMuted ? "🔇" : "🔊"}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={toggleMusic} activeOpacity={0.6} style={{ padding: 4 }}>
+                <Text style={{ fontSize: 16 }}>{isMusicMuted ? "🔇" : "🎵"}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Action buttons */}
