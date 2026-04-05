@@ -8,7 +8,7 @@ import {
   BOOSTERS, COSMETICS, BoosterType, CosmeticDef,
 } from "./engine";
 import { createRooms } from "./rooms";
-import { playSfx, preloadSounds } from "./sound";
+import { playSfx, preloadSounds, startBGM, stopBGM } from "./sound";
 import { loadSave, writeSave, SaveData } from "./storage";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
@@ -216,6 +216,7 @@ export default function Game() {
       checkpoint: null, slowMoFrames: 0, springBoostActive: false,
     };
     setStatus("playing");
+    startBGM();
   }, []);
 
   const buyBooster = useCallback((id: BoosterType) => {
@@ -254,7 +255,7 @@ export default function Game() {
     inputRef.current.activateSlowmo = false;
     inputRef.current.placeCheckpoint = false;
     updateGame(gs, input, sfxCallback);
-    if ((gs.status as string) === "win") { setStatus("win"); writeSave(gs); }
+    if ((gs.status as string) === "win") { setStatus("win"); writeSave(gs); stopBGM(); }
     setPicture(renderToPicture(gs));
     animRef.current = requestAnimationFrame(gameLoop);
   }, [sfxCallback]);
@@ -317,7 +318,7 @@ export default function Game() {
             <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10, paddingHorizontal: 10 }}>
               <Text style={{ color: "#67c7d4", fontSize: 20, fontWeight: "bold", fontFamily: "monospace" }}>🪙 SHOP</Text>
               <Text style={{ color: "#f1c40f", fontSize: 14, fontWeight: "bold", fontFamily: "monospace" }}>🪙 {gs.coins}</Text>
-              <TouchableOpacity onPress={() => { setStatus("playing"); gs.status = "playing"; }} style={{ backgroundColor: "#374151", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4 }}>
+              <TouchableOpacity onPress={() => { setStatus("playing"); gs.status = "playing"; startBGM(); }} style={{ backgroundColor: "#374151", paddingHorizontal: 12, paddingVertical: 6, borderRadius: 4 }}>
                 <Text style={{ color: "#fff", fontSize: 12, fontFamily: "monospace" }}>✕ CLOSE</Text>
               </TouchableOpacity>
             </View>
@@ -408,7 +409,7 @@ export default function Game() {
                 <Text style={styles.boosterText}>🚩</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.shopMiniBtn} onPress={() => { setStatus("shop"); if (gs) gs.status = "shop"; }} activeOpacity={0.6}>
+            <TouchableOpacity style={styles.shopMiniBtn} onPress={() => { setStatus("shop"); if (gs) gs.status = "shop"; stopBGM(); }} activeOpacity={0.6}>
               <Text style={{ color: "#f1c40f", fontSize: 10, fontWeight: "bold", fontFamily: "monospace" }}>🪙 SHOP</Text>
             </TouchableOpacity>
           </View>

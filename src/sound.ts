@@ -179,9 +179,86 @@ function generateSound(type: string): Float32Array {
   }
 }
 
+// ─── Chiptune BGM Generator (I–V–vi–IV in C major) ──────────────────────────
+function triangle(t: number, freq: number): number {
+  const p = (t * freq) % 1;
+  return 4 * Math.abs(p - 0.5) - 1;
+}
+
+function generateBGM(): Float32Array {
+  const BPM = 120;
+  const beatDur = 60 / BPM; // 0.5s
+  const barDur = beatDur * 4; // 2s
+  const loopDur = barDur * 4; // 8s
+  const totalSamples = Math.floor(SAMPLE_RATE * loopDur);
+  const samples = new Float32Array(totalSamples);
+
+  // Chords: I=C, V=G, vi=Am, IV=F
+  const chords = [
+    { root: 131, notes: [262, 330, 392] },   // C
+    { root: 98,  notes: [196, 247, 294] },    // G
+    { root: 110, notes: [220, 262, 330] },    // Am
+    { root: 87,  notes: [175, 220, 262] },    // F
+  ];
+
+  const melodies = [
+    [523, 659, 784, 659, 523, 784, 659, 523],
+    [392, 494, 587, 494, 784, 587, 494, 392],
+    [659, 523, 440, 523, 659, 523, 440, 330],
+    [349, 440, 523, 440, 349, 523, 440, 349],
+  ];
+
+  for (let i = 0; i < totalSamples; i++) {
+    const t = i / SAMPLE_RATE;
+    const barIdx = Math.floor(t / barDur) % 4;
+    const barT = t - barIdx * barDur;
+    const chord = chords[barIdx];
+    const melody = melodies[barIdx];
+
+    let sample = 0;
+
+    // Bass (triangle wave)
+    sample += triangle(t, chord.root) * 0.08;
+
+    // Arpeggio (square wave, 8th notes)
+    const eighthIdx = Math.floor(barT / (beatDur / 2)) % 8;
+    const arpFreq = chord.notes[eighthIdx % chord.notes.length];
+    const arpEnv = 1 - ((barT % (beatDur / 2)) / (beatDur / 2));
+    sample += square(t, arpFreq) * arpEnv * 0.03;
+
+    // Melody (square wave, 8th notes)
+    const melFreq = melody[eighthIdx];
+    const melEnv = 1 - ((barT % (beatDur / 2)) / (beatDur / 2));
+    sample += square(t, melFreq) * melEnv * 0.04;
+
+    // Kick on beats 1 and 3
+    const beatInBar = Math.floor(barT / beatDur);
+    if (beatInBar % 2 === 0) {
+      const kickT = barT - beatInBar * beatDur;
+      if (kickT < 0.1) {
+        const kickFreq = lerp(150, 40, kickT / 0.1);
+        sample += sine(kickT, kickFreq) * (1 - kickT / 0.1) * 0.1;
+      }
+    }
+
+    // Hi-hat on every 8th note
+    const hatT = barT % (beatDur / 2);
+    if (hatT < 0.03) {
+      sample += noise() * (1 - hatT / 0.03) * (eighthIdx % 2 === 0 ? 0.03 : 0.015);
+    }
+
+    samples[i] = Math.max(-1, Math.min(1, sample));
+  }
+
+  return samples;
+}
+
 // Pre-generate and cache sounds
 const soundCache: Record<string, Audio.Sound | null> = {};
 const soundUris: Record<string, string> = {};
+let bgmUri: string | null = null;
+let bgmSound: Audio.Sound | null = null;
+let bgmPlaying = false;
 
 const SOUND_TYPES = ["jump", "walljump", "dash", "death", "strawberry", "spring", "land", "crumble", "roomenter", "win"];
 
@@ -199,6 +276,14 @@ export async function preloadSounds(): Promise<void> {
       // Silently skip
     }
   }
+
+  // Generate BGM
+  try {
+    const bgmSamples = generateBGM();
+    bgmUri = createWav(bgmSamples);
+  } catch {
+    // Silently skip
+  }
 }
 
 export async function playSfx(type: string): Promise<void> {
@@ -206,7 +291,6 @@ export async function playSfx(type: string): Promise<void> {
     const uri = soundUris[type];
     if (!uri) return;
 
-    // Unload previous instance if exists
     if (soundCache[type]) {
       await soundCache[type]!.unloadAsync().catch(() => {});
     }
@@ -219,4 +303,33 @@ export async function playSfx(type: string): Promise<void> {
   } catch {
     // Audio not available
   }
+}
+
+export async function startBGM(): Promise<void> {
+  if (bgmPlaying || !bgmUri) return;
+  try {
+    if (bgmSound) {
+      await bgmSound.unloadAsync().catch(() => {});
+    }
+    const { sound } = await Audio.Sound.createAsync(
+      { uri: bgmUri },
+      { shouldPlay: true, isLooping: true, volume: 0.5 }
+    );
+    bgmSound = sound;
+    bgmPlaying = true;
+  } catch {
+    // Audio not available
+  }
+}
+
+export async function stopBGM(): Promise<void> {
+  if (!bgmPlaying || !bgmSound) return;
+  try {
+    await bgmSound.stopAsync();
+    await bgmSound.unloadAsync();
+  } catch {
+    // ignore
+  }
+  bgmSound = null;
+  bgmPlaying = false;
 }
