@@ -214,6 +214,7 @@ export default function Game() {
       equippedHair: save.eqHair, equippedTrail: save.eqTrail, equippedDeathEffect: save.eqDeath,
       activeBooster: null, shieldActive: false, doubleDashActive: false,
       checkpoint: null, slowMoFrames: 0, springBoostActive: false,
+      starterPackBought: save.starterPack,
     };
     setStatus("playing");
     startBGM();
@@ -243,6 +244,20 @@ export default function Game() {
       gs.ownedCosmetics.add(id);
       playSfx("buy");
     }
+    writeSave(gs); forceUpdate(n => n + 1);
+  }, []);
+
+  const buyStarterPack = useCallback(() => {
+    const gs = gsRef.current; if (!gs || gs.starterPackBought) return;
+    gs.starterPackBought = true;
+    gs.coins += 100;
+    gs.ownedCosmetics.add("hair_aurora");
+    gs.ownedCosmetics.add("trail_aurora");
+    gs.equippedHair = "hair_aurora";
+    gs.equippedTrail = "trail_aurora";
+    gs.player.hairColor = "#ff6b9d";
+    playSfx("strawberry");
+    playSfx("buy");
     writeSave(gs); forceUpdate(n => n + 1);
   }, []);
 
@@ -333,6 +348,38 @@ export default function Game() {
             </View>
 
             <ScrollView style={{ flex: 1, paddingHorizontal: 10 }}>
+              {/* Starter Pack Banner */}
+              {!gs.starterPackBought && (
+                <View style={{ marginBottom: 12, borderRadius: 10, overflow: "hidden", borderWidth: 1, borderColor: "rgba(196,77,255,0.4)", backgroundColor: "#1a0533" }}>
+                  <View style={{ padding: 12 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", marginBottom: 6 }}>
+                      <Text style={{ fontSize: 16, marginRight: 6 }}>⭐</Text>
+                      <Text style={{ color: "#fde68a", fontWeight: "bold", fontSize: 13, fontFamily: "monospace" }}>STARTER PACK</Text>
+                      <View style={{ marginLeft: "auto", backgroundColor: "#ef4444", paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 }}>
+                        <Text style={{ color: "#fff", fontSize: 9, fontWeight: "bold", fontFamily: "monospace" }}>BEST VALUE</Text>
+                      </View>
+                    </View>
+                    <View style={{ flexDirection: "row", alignItems: "center" }}>
+                      <View style={{ flex: 1 }}>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#ff6b9d" }} />
+                          <Text style={{ color: "#d1d5db", fontSize: 11, fontFamily: "monospace" }}>Aurora Hair (Exclusive)</Text>
+                        </View>
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 2 }}>
+                          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: "#c44dff" }} />
+                          <Text style={{ color: "#d1d5db", fontSize: 11, fontFamily: "monospace" }}>Aurora Trail (Exclusive)</Text>
+                        </View>
+                        <Text style={{ color: "#f1c40f", fontSize: 11, fontFamily: "monospace" }}>+ 100 🪙 Coins</Text>
+                        <Text style={{ color: "#6b7280", fontSize: 10, fontFamily: "monospace", textDecorationLine: "line-through", marginTop: 2 }}>Value: 140 coins</Text>
+                      </View>
+                      <TouchableOpacity onPress={buyStarterPack} style={{ backgroundColor: "#7c3aed", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 }} activeOpacity={0.7}>
+                        <Text style={{ color: "#fff", fontWeight: "bold", fontSize: 14, fontFamily: "monospace" }}>$0.99</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
+              )}
+
               {shopTab === "boosters" && BOOSTERS.map(b => (
                 <View key={b.id} style={{ backgroundColor: "#1f2937", borderRadius: 8, padding: 10, marginBottom: 8, flexDirection: "row", alignItems: "center" }}>
                   <Text style={{ fontSize: 24, marginRight: 10 }}>{b.icon}</Text>

@@ -87,6 +87,9 @@ export const COSMETICS: CosmeticDef[] = [
   { id: "death_explode", type: "deathEffect", name: "Explosion", cost: 15, color: "#e74c3c" },
   { id: "death_dissolve", type: "deathEffect", name: "Dissolve", cost: 15, color: "#a29bfe" },
   { id: "death_shatter", type: "deathEffect", name: "Shatter", cost: 15, color: "#00cec9" },
+  // Starter pack exclusive
+  { id: "hair_aurora", type: "hair", name: "Aurora Hair ⭐", cost: 999, color: "#ff6b9d" },
+  { id: "trail_aurora", type: "trail", name: "Aurora Trail ⭐", cost: 999, color: "#c44dff" },
 ];
 
 // ─── Input ───────────────────────────────────────────────────────────────────
@@ -122,6 +125,7 @@ export interface GameState {
   checkpoint: { x: number; y: number } | null;
   slowMoFrames: number;
   springBoostActive: boolean;
+  starterPackBought: boolean;
 }
 
 export type SfxCallback = (type: string) => void;
