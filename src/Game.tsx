@@ -1,6 +1,6 @@
 import React, { useRef, useCallback, useState, useEffect } from "react";
 import { View, Text, TouchableOpacity, Dimensions, StyleSheet, ScrollView } from "react-native";
-import { Skia, SkPicture, SkCanvas } from "@shopify/react-native-skia";
+import { Skia, SkPicture, SkCanvas, matchFont } from "@shopify/react-native-skia";
 import { SkiaPictureView } from "@shopify/react-native-skia";
 import {
   GameState, InputState, GAME_W, GAME_H, TILE, PW, PH, DEFAULT_HAIR,
@@ -12,17 +12,21 @@ import { playSfx, preloadSounds, startBGM, stopBGM, sfxMuted, musicMuted, setSfx
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { loadSave, writeSave, SaveData } from "./storage";
 
-const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
-const CONTROLS_HEIGHT = 150;
-const CANVAS_AREA_H = SCREEN_H - CONTROLS_HEIGHT;
-const SCALE = Math.min(SCREEN_W / GAME_W, CANVAS_AREA_H / GAME_H);
-const OFFSET_X = (SCREEN_W - GAME_W * SCALE) / 2;
-const OFFSET_Y = (CANVAS_AREA_H - GAME_H * SCALE) / 2;
+// Landscape layout: game canvas on top, thin control strip on bottom
+const screen = Dimensions.get("window");
+const SCREEN_W = Math.max(screen.width, screen.height);
+const SCREEN_H = Math.min(screen.width, screen.height);
+const CONTROLS_HEIGHT = 80;
+const CANVAS_W = SCREEN_W;
+const CANVAS_H = SCREEN_H - CONTROLS_HEIGHT;
+const SCALE = Math.min(CANVAS_W / GAME_W, CANVAS_H / GAME_H);
+const OFFSET_X = (CANVAS_W - GAME_W * SCALE) / 2;
+const OFFSET_Y = (CANVAS_H - GAME_H * SCALE) / 2;
 
 // ─── Render to SkPicture ─────────────────────────────────────────────────────
 function renderToPicture(gs: GameState): SkPicture {
   const recorder = Skia.PictureRecorder();
-  const canvas = recorder.beginRecording(Skia.XYWHRect(0, 0, SCREEN_W, CANVAS_AREA_H));
+  const canvas = recorder.beginRecording(Skia.XYWHRect(0, 0, CANVAS_W, CANVAS_H + 1));
   drawGame(canvas, gs);
   return recorder.finishRecordingAsPicture();
 }
@@ -146,7 +150,7 @@ function drawGame(canvas: SkCanvas, gs: GameState) {
   }
 
   // HUD
-  const font = Skia.Font(undefined, 13);
+  const font = matchFont({ fontSize: 13 });
   paint.setColor(Skia.Color("rgba(0,0,0,0.4)"));
   canvas.drawRect(Skia.XYWHRect(8, 8, 100, 24), paint);
   canvas.drawRect(Skia.XYWHRect(8, 36, 100, 24), paint);
@@ -285,21 +289,23 @@ export default function Game() {
 
   const gameLoop = useCallback(() => {
     const gs = gsRef.current;
-    if (!gs || gs.status !== "playing") return;
-    const input = { ...inputRef.current };
-    inputRef.current.jumpJustPressed = false;
-    inputRef.current.dash = false;
-    inputRef.current.activateSlowmo = false;
-    inputRef.current.placeCheckpoint = false;
-    updateGame(gs, input, sfxCallback);
-    if ((gs.status as string) === "win") { setStatus("win"); writeSave(gs); stopBGM(); }
-    if ((gs.status as string) === "offer") { setStatus("offer"); }
+    if (!gs) return;
+    if (gs.status === "playing") {
+      const input = { ...inputRef.current };
+      inputRef.current.jumpJustPressed = false;
+      inputRef.current.dash = false;
+      inputRef.current.activateSlowmo = false;
+      inputRef.current.placeCheckpoint = false;
+      updateGame(gs, input, sfxCallback);
+      if ((gs.status as string) === "win") { setStatus("win"); writeSave(gs); stopBGM(); }
+      if ((gs.status as string) === "offer") { setStatus("offer"); }
+    }
     setPicture(renderToPicture(gs));
     animRef.current = requestAnimationFrame(gameLoop);
   }, [sfxCallback]);
 
   useEffect(() => {
-    if (status === "playing") {
+    if (status === "playing" || status === "offer") {
       animRef.current = requestAnimationFrame(gameLoop);
       return () => cancelAnimationFrame(animRef.current);
     }
@@ -508,13 +514,13 @@ export default function Game() {
         );
       })()}
 
-      <SkiaPictureView style={{ width: SCREEN_W, height: CANVAS_AREA_H }} picture={picture ?? undefined} />
+      <SkiaPictureView style={{ width: CANVAS_W, height: CANVAS_H }} picture={picture ?? undefined} />
 
-      {/* Controls */}
+      {/* Controls — bottom strip like a game controller */}
       {status === "playing" && (
-        <View style={styles.controls}>
-          {/* D-pad */}
-          <View style={styles.dpad}>
+        <View style={{ height: CONTROLS_HEIGHT, flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 16, backgroundColor: "#0a0a18" }}>
+          {/* D-pad — left side */}
+          <View style={{ flexDirection: "row", gap: 10 }}>
             <TouchableOpacity style={styles.dpadBtn} onPressIn={() => setInput("left", true)} onPressOut={() => setInput("left", false)} activeOpacity={0.6}>
               <Text style={styles.dpadText}>◀</Text>
             </TouchableOpacity>
@@ -523,8 +529,8 @@ export default function Game() {
             </TouchableOpacity>
           </View>
 
-          {/* Booster buttons (contextual) */}
-          <View style={{ alignItems: "center", gap: 4 }}>
+          {/* Center — shop, mute, boosters */}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             {gs?.activeBooster === "slowmo" && gs.slowMoFrames <= 0 && (
               <TouchableOpacity style={styles.boosterBtn} onPress={() => { inputRef.current.activateSlowmo = true; }} activeOpacity={0.6}>
                 <Text style={styles.boosterText}>🕐</Text>
@@ -535,21 +541,19 @@ export default function Game() {
                 <Text style={styles.boosterText}>🚩</Text>
               </TouchableOpacity>
             )}
+            <TouchableOpacity onPress={toggleSfx} activeOpacity={0.6} style={{ padding: 4 }}>
+              <Text style={{ fontSize: 14 }}>{isSfxMuted ? "🔇" : "🔊"}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={toggleMusic} activeOpacity={0.6} style={{ padding: 4 }}>
+              <Text style={{ fontSize: 14 }}>{isMusicMuted ? "🔇" : "🎵"}</Text>
+            </TouchableOpacity>
             <TouchableOpacity style={styles.shopMiniBtn} onPress={() => { setStatus("shop"); if (gs) gs.status = "shop"; stopBGM(); }} activeOpacity={0.6}>
               <Text style={{ color: "#f1c40f", fontSize: 10, fontWeight: "bold", fontFamily: "monospace" }}>🪙 SHOP</Text>
             </TouchableOpacity>
-            <View style={{ flexDirection: "row", gap: 6 }}>
-              <TouchableOpacity onPress={toggleSfx} activeOpacity={0.6} style={{ padding: 4 }}>
-                <Text style={{ fontSize: 16 }}>{isSfxMuted ? "🔇" : "🔊"}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={toggleMusic} activeOpacity={0.6} style={{ padding: 4 }}>
-                <Text style={{ fontSize: 16 }}>{isMusicMuted ? "🔇" : "🎵"}</Text>
-              </TouchableOpacity>
-            </View>
           </View>
 
-          {/* Action buttons */}
-          <View style={styles.actionBtns}>
+          {/* Action buttons — right side */}
+          <View style={{ flexDirection: "row", gap: 12 }}>
             <TouchableOpacity style={[styles.actionBtn, styles.dashBtnStyle]} onPressIn={() => setInput("dash", true)} onPressOut={() => setInput("dash", false)} activeOpacity={0.6}>
               <Text style={styles.actionText}>DASH</Text>
             </TouchableOpacity>
@@ -580,13 +584,13 @@ const styles = StyleSheet.create({
   hint: { color: "#555", fontSize: 10, fontFamily: "monospace", marginTop: 16 },
   stat: { color: "#aaa", fontSize: 13, fontFamily: "monospace", marginTop: 4 },
   controls: {
-    height: CONTROLS_HEIGHT, flexDirection: "row",
+    flexDirection: "column",
     justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 16, backgroundColor: "#0a0a18",
+    paddingVertical: 16,
   },
-  dpad: { flexDirection: "row", gap: 10 },
+  dpad: { flexDirection: "row", gap: 8 },
   dpadBtn: {
-    width: 60, height: 60, borderRadius: 12,
+    width: 56, height: 56, borderRadius: 12,
     backgroundColor: "rgba(255,255,255,0.08)",
     justifyContent: "center", alignItems: "center",
     borderWidth: 1, borderColor: "rgba(255,255,255,0.1)",
@@ -594,7 +598,7 @@ const styles = StyleSheet.create({
   dpadText: { color: "#aaa", fontSize: 22 },
   actionBtns: { flexDirection: "row", gap: 10 },
   actionBtn: {
-    width: 68, height: 68, borderRadius: 34,
+    width: 56, height: 56, borderRadius: 28,
     justifyContent: "center", alignItems: "center", borderWidth: 2,
   },
   jumpBtnStyle: { backgroundColor: "rgba(103,199,212,0.15)", borderColor: "rgba(103,199,212,0.4)" },
