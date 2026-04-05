@@ -185,7 +185,7 @@ export default function Game() {
     activateSlowmo: false, placeCheckpoint: false,
   });
   const animRef = useRef<number>(0);
-  const [status, setStatus] = useState<"menu" | "playing" | "win" | "shop">("menu");
+  const [status, setStatus] = useState<"menu" | "playing" | "win" | "shop" | "offer">("menu");
   const [shopTab, setShopTab] = useState<"boosters" | "cosmetics">("boosters");
   const [picture, setPicture] = useState<SkPicture | null>(null);
   const [, forceUpdate] = useState(0);
@@ -236,6 +236,7 @@ export default function Game() {
       activeBooster: null, shieldActive: false, doubleDashActive: false,
       checkpoint: null, slowMoFrames: 0, springBoostActive: false,
       starterPackBought: save.starterPack,
+      roomDeaths: 0, offerBooster: null,
     };
     setStatus("playing");
     startBGM();
@@ -292,6 +293,7 @@ export default function Game() {
     inputRef.current.placeCheckpoint = false;
     updateGame(gs, input, sfxCallback);
     if ((gs.status as string) === "win") { setStatus("win"); writeSave(gs); stopBGM(); }
+    if ((gs.status as string) === "offer") { setStatus("offer"); }
     setPicture(renderToPicture(gs));
     animRef.current = requestAnimationFrame(gameLoop);
   }, [sfxCallback]);
@@ -457,6 +459,54 @@ export default function Game() {
           </View>
         </View>
       )}
+
+      {/* Death-triggered offer */}
+      {status === "offer" && gs && gs.offerBooster && (() => {
+        const booster = BOOSTERS.find(b => b.id === gs.offerBooster);
+        if (!booster) return null;
+        const canAfford = gs.coins >= booster.cost;
+        return (
+          <View style={styles.overlay}>
+            <View style={{ backgroundColor: "#111827", borderWidth: 1, borderColor: "rgba(234,179,8,0.4)", borderRadius: 16, padding: 20, maxWidth: 280, alignItems: "center" }}>
+              <Text style={{ color: "#9ca3af", fontSize: 11, fontFamily: "monospace", marginBottom: 8 }}>Struggling? Try a boost!</Text>
+              <Text style={{ fontSize: 28, marginBottom: 4 }}>{booster.icon}</Text>
+              <Text style={{ color: "#fff", fontSize: 18, fontWeight: "bold", fontFamily: "monospace", marginBottom: 4 }}>{booster.name}</Text>
+              <Text style={{ color: "#9ca3af", fontSize: 11, fontFamily: "monospace", marginBottom: 16, textAlign: "center" }}>{booster.desc}</Text>
+              <View style={{ flexDirection: "row", gap: 8 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (canAfford) {
+                      gs.coins -= booster.cost;
+                      gs.activeBooster = booster.id;
+                      if (booster.id === "shield") gs.shieldActive = true;
+                      if (booster.id === "doubleDash") gs.doubleDashActive = true;
+                      if (booster.id === "springBoost") gs.springBoostActive = true;
+                      playSfx("buy");
+                      writeSave(gs);
+                    }
+                    gs.offerBooster = null;
+                    gs.status = "playing";
+                    setStatus("playing");
+                  }}
+                  disabled={!canAfford}
+                  style={{ backgroundColor: canAfford ? "#92400e" : "#374151", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 }}
+                >
+                  <Text style={{ color: canAfford ? "#fff" : "#6b7280", fontSize: 13, fontWeight: "bold", fontFamily: "monospace" }}>
+                    {canAfford ? `🪙 ${booster.cost} — BUY` : `Need ${booster.cost}`}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => { gs.offerBooster = null; gs.status = "playing"; setStatus("playing"); }}
+                  style={{ backgroundColor: "#1f2937", paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 }}
+                >
+                  <Text style={{ color: "#9ca3af", fontSize: 13, fontWeight: "bold", fontFamily: "monospace" }}>No thanks</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={{ color: "#4b5563", fontSize: 10, fontFamily: "monospace", marginTop: 10 }}>🪙 {gs.coins} coins</Text>
+            </View>
+          </View>
+        );
+      })()}
 
       <SkiaPictureView style={{ width: SCREEN_W, height: CANVAS_AREA_H }} picture={picture ?? undefined} />
 

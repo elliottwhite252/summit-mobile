@@ -109,7 +109,7 @@ export interface GameState {
   totalStrawberries: number;
   particles: Particle[];
   snow: Snowflake[];
-  status: "menu" | "playing" | "win" | "shop";
+  status: "menu" | "playing" | "win" | "shop" | "offer";
   screenShake: number;
   time: number;
   // Economy
@@ -126,6 +126,8 @@ export interface GameState {
   slowMoFrames: number;
   springBoostActive: boolean;
   starterPackBought: boolean;
+  roomDeaths: number;
+  offerBooster: BoosterType | null;
 }
 
 export type SfxCallback = (type: string) => void;
@@ -207,11 +209,17 @@ function killPlayer(gs: GameState, sfx: SfxCallback) {
   }
   const p = gs.player;
   p.dead = true; p.deadTimer = 20;
-  gs.deaths++; gs.screenShake = 8;
+  gs.deaths++; gs.roomDeaths++; gs.screenShake = 8;
   sfx("death");
   const colors = getDeathColors(gs);
   spawnParticles(gs, p.x + PW / 2, p.y + PH / 2, colors[0], 20, 8);
   spawnParticles(gs, p.x + PW / 2, p.y + PH / 2, colors[1], 10, 6);
+
+  // Death-triggered offer
+  if (gs.roomDeaths % 3 === 0 && !gs.activeBooster && gs.coins >= 3) {
+    gs.offerBooster = gs.roomDeaths >= 6 ? "doubleDash" : "shield";
+    p.deadTimer = 25;
+  }
 }
 
 function respawnPlayer(gs: GameState) {
@@ -230,6 +238,8 @@ function enterRoom(gs: GameState, roomIdx: number) {
   gs.doubleDashActive = false;
   gs.springBoostActive = false;
   gs.slowMoFrames = 0;
+  gs.roomDeaths = 0;
+  gs.offerBooster = null;
 }
 
 // ─── Main Update ─────────────────────────────────────────────────────────────
@@ -249,7 +259,13 @@ export function updateGame(gs: GameState, input: InputState, sfx: SfxCallback): 
   // Death timer
   if (p.dead) {
     p.deadTimer--;
-    if (p.deadTimer <= 0) respawnPlayer(gs);
+    if (p.deadTimer <= 0) {
+      respawnPlayer(gs);
+      if (gs.offerBooster) {
+        gs.status = "offer";
+        return;
+      }
+    }
     gs.particles = gs.particles.filter(part => { part.x += part.vx; part.y += part.vy; part.vy += 0.1; part.life -= 0.04; return part.life > 0; });
     return;
   }
