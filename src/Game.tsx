@@ -336,7 +336,7 @@ export default function Game() {
       {status === "menu" && (
         <View style={styles.overlay}>
           <Text style={styles.mountain}>🏔️</Text>
-          <Text style={styles.title}>SUMMIT</Text>
+          <Text style={styles.title}>ASCENT</Text>
           <Text style={styles.subtitle}>REACH THE TOP</Text>
           <View style={{ flexDirection: "row", gap: 10, marginBottom: 10 }}>
             <TouchableOpacity style={styles.startBtn} onPress={initGame}><Text style={styles.startText}>CLIMB</Text></TouchableOpacity>
@@ -361,7 +361,7 @@ export default function Game() {
       {status === "win" && (
         <View style={styles.overlay}>
           <Text style={styles.mountain}>⛰️</Text>
-          <Text style={styles.title}>SUMMIT REACHED</Text>
+          <Text style={styles.title}>ASCENT REACHED</Text>
           <Text style={styles.stat}>Deaths: {gs?.deaths || 0}</Text>
           <Text style={styles.stat}>Strawberries: {gs?.strawberriesCollected || 0}/{gs?.totalStrawberries || 0}</Text>
           <Text style={[styles.stat, { color: "#f1c40f" }]}>Coins: 🪙 {gs?.coins || 0}</Text>
