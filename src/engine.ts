@@ -22,6 +22,9 @@ export const PW = 12;
 export const PH = 16;
 export const HAIR_COUNT = 5;
 export const DEFAULT_HAIR = "#E84855";
+export const HALF_GRAV_THRESHOLD = -2;
+export const CORNER_CORRECTION = 4;
+export const WALL_JUMP_FORGIVENESS = 4;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export interface Rect { x: number; y: number; w: number; h: number }
@@ -128,6 +131,8 @@ export interface GameState {
   starterPackBought: boolean;
   roomDeaths: number;
   offerBooster: BoosterType | null;
+  transitionTimer: number;
+  transitionDir: number;
 }
 
 export type SfxCallback = (type: string) => void;
@@ -321,17 +326,39 @@ export function updateGame(gs: GameState, input: InputState, sfx: SfxCallback): 
     if (gs.time % 2 === 0) gs.particles.push({ x: p.x + PW / 2, y: p.y + PH / 2, vx: 0, vy: 0, life: 0.6, color: p.hairColor, size: 4 });
   } else { p.dashCooldown = Math.max(0, p.dashCooldown - 1); }
 
-  // Gravity
+  // Gravity (with half-gravity at jump peak for hangtime)
   if (p.dashing <= 0) {
-    if (p.wallDir !== 0 && p.vy > 0) p.vy = Math.min(p.vy + GRAVITY * 0.4 * slowMo, WALL_SLIDE_SPEED);
-    else p.vy = Math.min(p.vy + GRAVITY * slowMo, MAX_FALL);
+    if (p.wallDir !== 0 && p.vy > 0) {
+      p.vy = Math.min(p.vy + GRAVITY * 0.4 * slowMo, WALL_SLIDE_SPEED);
+    } else if (p.jumpHeld && Math.abs(p.vy) < Math.abs(HALF_GRAV_THRESHOLD)) {
+      p.vy = Math.min(p.vy + GRAVITY * 0.5 * slowMo, MAX_FALL);
+    } else {
+      p.vy = Math.min(p.vy + GRAVITY * slowMo, MAX_FALL);
+    }
   }
 
   // Collisions
   p.x += p.vx;
   const allSolids = [...room.platforms];
   for (const c of room.crumbles) { if (c.visible) allSolids.push({ x: c.x, y: c.y, w: c.w, h: TILE }); }
-  for (const plat of allSolids) { if (rectsOverlap({ x: p.x, y: p.y, w: PW, h: PH }, plat)) { if (p.vx > 0) p.x = plat.x - PW; else if (p.vx < 0) p.x = plat.x + plat.w; p.vx = 0; } }
+  for (const plat of allSolids) {
+    if (rectsOverlap({ x: p.x, y: p.y, w: PW, h: PH }, plat)) {
+      // Dash corner correction — pop up onto ledge when dashing sideways
+      if (p.dashing > 0 && Math.abs(p.dashDir.y) < 0.1) {
+        let popped = false;
+        for (let nudge = 1; nudge <= CORNER_CORRECTION + 2; nudge++) {
+          if (!rectsOverlap({ x: p.x, y: p.y - nudge, w: PW, h: PH }, plat)) {
+            let blocked = false;
+            for (const other of allSolids) { if (rectsOverlap({ x: p.x, y: p.y - nudge, w: PW, h: PH }, other)) { blocked = true; break; } }
+            if (!blocked) { p.y -= nudge; popped = true; break; }
+          }
+        }
+        if (popped) continue;
+      }
+      if (p.vx > 0) p.x = plat.x - PW; else if (p.vx < 0) p.x = plat.x + plat.w;
+      p.vx = 0;
+    }
+  }
 
   p.y += p.vy; p.grounded = false;
   for (const plat of allSolids) {
@@ -340,17 +367,34 @@ export function updateGame(gs: GameState, input: InputState, sfx: SfxCallback): 
         p.y = plat.y - PH; p.grounded = true; p.canDash = true; p.dashCount = 0;
         p.hairColor = getHairColor(gs);
         if (p.vy > 4) { spawnParticles(gs, p.x + PW / 2, p.y + PH, "rgba(255,255,255,0.4)", 3); sfx("land"); }
-      } else if (p.vy < 0) { p.y = plat.y + plat.h; }
-      p.vy = 0;
+      } else if (p.vy < 0) {
+        // Jump corner correction — nudge sideways when bumping head
+        let corrected = false;
+        for (let nudge = 1; nudge <= CORNER_CORRECTION; nudge++) {
+          if (!rectsOverlap({ x: p.x + nudge, y: p.y, w: PW, h: PH }, plat)) {
+            let blocked = false;
+            for (const other of allSolids) { if (rectsOverlap({ x: p.x + nudge, y: p.y, w: PW, h: PH }, other)) { blocked = true; break; } }
+            if (!blocked) { p.x += nudge; corrected = true; break; }
+          }
+          if (!rectsOverlap({ x: p.x - nudge, y: p.y, w: PW, h: PH }, plat)) {
+            let blocked = false;
+            for (const other of allSolids) { if (rectsOverlap({ x: p.x - nudge, y: p.y, w: PW, h: PH }, other)) { blocked = true; break; } }
+            if (!blocked) { p.x -= nudge; corrected = true; break; }
+          }
+        }
+        if (!corrected) { p.y = plat.y + plat.h; p.vy = 0; }
+      } else {
+        p.vy = 0;
+      }
     }
   }
 
-  // Walls
+  // Walls (wider forgiveness window)
   p.wallDir = 0;
   if (!p.grounded) {
     for (const plat of allSolids) {
-      if (rectsOverlap({ x: p.x - 2, y: p.y + 2, w: 2, h: PH - 4 }, plat) && input.left) p.wallDir = -1;
-      if (rectsOverlap({ x: p.x + PW, y: p.y + 2, w: 2, h: PH - 4 }, plat) && input.right) p.wallDir = 1;
+      if (rectsOverlap({ x: p.x - WALL_JUMP_FORGIVENESS, y: p.y + 2, w: WALL_JUMP_FORGIVENESS, h: PH - 4 }, plat) && input.left) p.wallDir = -1;
+      if (rectsOverlap({ x: p.x + PW, y: p.y + 2, w: WALL_JUMP_FORGIVENESS, h: PH - 4 }, plat) && input.right) p.wallDir = 1;
     }
   }
 
@@ -393,11 +437,23 @@ export function updateGame(gs: GameState, input: InputState, sfx: SfxCallback): 
   // Fall
   if (p.y > GAME_H + 20 || p.y < -40 || p.x < -20 || p.x > GAME_W + 20) { killPlayer(gs, sfx); return; }
 
-  // Room transition
+  // Room transition animation
+  if (gs.transitionTimer > 0) {
+    gs.transitionTimer--;
+    if (gs.transitionTimer === 10 && gs.transitionDir === 1) {
+      if (gs.currentRoom < gs.rooms.length - 1) enterRoom(gs, gs.currentRoom + 1);
+      gs.transitionDir = -1;
+    }
+    return;
+  }
+
+  // Room transition trigger
   if (p.x >= room.exitX && p.grounded) {
     gs.coins += 1; sfx("coin");
-    if (gs.currentRoom < gs.rooms.length - 1) { enterRoom(gs, gs.currentRoom + 1); sfx("roomenter"); }
-    else { gs.coins += 5; gs.status = "win"; sfx("win"); }
+    if (gs.currentRoom < gs.rooms.length - 1) {
+      gs.transitionTimer = 20; gs.transitionDir = 1;
+      sfx("roomenter");
+    } else { gs.coins += 5; gs.status = "win"; sfx("win"); }
     return;
   }
 

@@ -177,6 +177,16 @@ function drawGame(canvas: SkCanvas, gs: GameState) {
     canvas.drawRect(Skia.XYWHRect(0, 0, GAME_W * (gs.slowMoFrames / 300), 3), paint);
   }
 
+  // Room transition fade
+  if (gs.transitionTimer > 0) {
+    const progress = gs.transitionDir === 1
+      ? (20 - gs.transitionTimer) / 10
+      : gs.transitionTimer / 10;
+    const alpha = Math.min(1, Math.max(0, progress));
+    paint.setColor(Skia.Color(`rgba(0,0,0,${alpha})`));
+    canvas.drawRect(Skia.XYWHRect(-10, -10, GAME_W + 20, GAME_H + 20), paint);
+  }
+
   canvas.restore();
 }
 
@@ -241,6 +251,7 @@ export default function Game() {
       checkpoint: null, slowMoFrames: 0, springBoostActive: false,
       starterPackBought: save.starterPack,
       roomDeaths: 0, offerBooster: null,
+      transitionTimer: 0, transitionDir: 0,
     };
     setStatus("playing");
     startBGM();
