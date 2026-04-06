@@ -14,13 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.summit-mobile",
-      "infoPlist": {
-        "GADApplicationIdentifier": "ca-app-pub-4673214616192353~3200623455",
-        "SKAdNetworkItems": [
-          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
-        ]
-      }
+      "bundleIdentifier": "com.anonymous.summit-mobile"
     },
     "android": {
       "adaptiveIcon": {
