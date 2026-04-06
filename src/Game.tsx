@@ -11,6 +11,7 @@ import { createRooms } from "./rooms";
 import { playSfx, preloadSounds, startBGM, stopBGM, sfxMuted, musicMuted, setSfxMuted, setMusicMuted } from "./sound";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { loadSave, writeSave, SaveData } from "./storage";
+import { initAds, showInterstitial, showRewarded, isRewardedReady } from "./ads";
 
 // Landscape layout: game canvas on top, thin control strip on bottom
 const screen = Dimensions.get("window");
@@ -199,6 +200,7 @@ export default function Game() {
     activateSlowmo: false, placeCheckpoint: false,
   });
   const animRef = useRef<number>(0);
+  const prevRoomRef = useRef<number>(0);
   const [status, setStatus] = useState<"menu" | "playing" | "win" | "shop" | "offer">("menu");
   const [shopTab, setShopTab] = useState<"boosters" | "cosmetics">("boosters");
   const [picture, setPicture] = useState<SkPicture | null>(null);
@@ -209,6 +211,7 @@ export default function Game() {
 
   useEffect(() => {
     preloadSounds();
+    initAds();
     loadSave().then(s => setSavedCoins(s.coins));
     // Load audio settings
     AsyncStorage.getItem("summit_sfx_muted").then(v => { if (v === "true") { setSfxMuted(true); setIsSfxMuted(true); } });
@@ -310,6 +313,13 @@ export default function Game() {
       updateGame(gs, input, sfxCallback);
       if ((gs.status as string) === "win") { setStatus("win"); writeSave(gs); stopBGM(); }
       if ((gs.status as string) === "offer") { setStatus("offer"); }
+      // Show interstitial ad every 3 rooms
+      if (gs.currentRoom !== prevRoomRef.current) {
+        prevRoomRef.current = gs.currentRoom;
+        if (gs.currentRoom > 0 && gs.currentRoom % 3 === 0) {
+          showInterstitial();
+        }
+      }
     }
     setPicture(renderToPicture(gs));
     animRef.current = requestAnimationFrame(gameLoop);
@@ -427,6 +437,25 @@ export default function Game() {
                   </View>
                 </View>
               )}
+
+              {/* Watch Ad for Coins */}
+              <TouchableOpacity
+                onPress={() => {
+                  showRewarded(() => {
+                    if (gs) {
+                      gs.coins += 5;
+                      playSfx("coin");
+                      writeSave(gs);
+                      forceUpdate(n => n + 1);
+                    }
+                  });
+                }}
+                style={{ backgroundColor: "#065f46", borderRadius: 8, padding: 12, marginBottom: 10, flexDirection: "row", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(16,185,129,0.3)" }}
+                activeOpacity={0.7}
+              >
+                <Text style={{ fontSize: 16, marginRight: 8 }}>🎬</Text>
+                <Text style={{ color: "#10b981", fontSize: 13, fontWeight: "bold", fontFamily: "monospace" }}>Watch Ad for 5 🪙</Text>
+              </TouchableOpacity>
 
               {shopTab === "boosters" && BOOSTERS.map(b => (
                 <View key={b.id} style={{ backgroundColor: "#1f2937", borderRadius: 8, padding: 10, marginBottom: 8, flexDirection: "row", alignItems: "center" }}>
