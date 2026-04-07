@@ -14,8 +14,22 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.summit-mobile"
+      "bundleIdentifier": "com.anonymous.summit-mobile",
+      "infoPlist": {
+        "GADApplicationIdentifier": "ca-app-pub-4673214616192353~3200623455",
+        "SKAdNetworkItems": [
+          { "SKAdNetworkIdentifier": "cstr6suwn9.skadnetwork" }
+        ]
+      }
     },
+    "plugins": [
+      [
+        "react-native-google-mobile-ads",
+        {
+          "iosAppId": "ca-app-pub-4673214616192353~3200623455"
+        }
+      ]
+    ],
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

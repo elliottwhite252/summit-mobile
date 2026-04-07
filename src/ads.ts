@@ -1,19 +1,122 @@
-// Ads stub — AdMob will be integrated via react-native-google-mobile-ads
-// with proper native delegate setup in a future session.
-// For now, all ad functions are no-ops so the app runs without ads.
+import mobileAds, {
+  InterstitialAd,
+  RewardedAd,
+  AdEventType,
+  RewardedAdEventType,
+  TestIds,
+} from "react-native-google-mobile-ads";
+
+// Use test IDs in dev, real IDs in production
+const USE_TEST_ADS = true; // Set to false for production
+
+const INTERSTITIAL_ID = USE_TEST_ADS
+  ? TestIds.INTERSTITIAL
+  : "ca-app-pub-4673214616192353/9960743975";
+
+const REWARDED_ID = USE_TEST_ADS
+  ? TestIds.REWARDED
+  : "ca-app-pub-4673214616192353/4398155050";
+
+// ─── Initialize SDK ──────────────────────────────────────────────────────────
+let initialized = false;
 
 export async function initAds() {
-  // No-op
+  if (initialized) return;
+  try {
+    await mobileAds().initialize();
+    initialized = true;
+    loadInterstitial();
+    loadRewarded();
+  } catch (e) {
+    console.log("AdMob init failed:", e);
+  }
 }
 
-export async function showInterstitial(): Promise<boolean> {
-  return false;
+// ─── Interstitial ────────────────────────────────────────────────────────────
+let interstitialLoaded = false;
+
+function loadInterstitial() {
+  const ad = InterstitialAd.createForAdRequest(INTERSTITIAL_ID);
+
+  ad.addAdEventListener(AdEventType.LOADED, () => {
+    interstitialLoaded = true;
+  });
+
+  ad.addAdEventListener(AdEventType.CLOSED, () => {
+    interstitialLoaded = false;
+    // Preload next
+    setTimeout(loadInterstitial, 1000);
+  });
+
+  ad.addAdEventListener(AdEventType.ERROR, () => {
+    interstitialLoaded = false;
+    setTimeout(loadInterstitial, 30000);
+  });
+
+  ad.load();
 }
 
-export async function showRewarded(onReward: () => void): Promise<boolean> {
-  return false;
+let currentInterstitial: InterstitialAd | null = null;
+
+export function showInterstitial(): boolean {
+  if (!interstitialLoaded) return false;
+  try {
+    const ad = InterstitialAd.createForAdRequest(INTERSTITIAL_ID);
+    ad.addAdEventListener(AdEventType.LOADED, () => {
+      ad.show();
+    });
+    ad.addAdEventListener(AdEventType.CLOSED, () => {
+      setTimeout(loadInterstitial, 1000);
+    });
+    ad.addAdEventListener(AdEventType.ERROR, () => {
+      setTimeout(loadInterstitial, 5000);
+    });
+    ad.load();
+    interstitialLoaded = false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// ─── Rewarded ────────────────────────────────────────────────────────────────
+let rewardedLoaded = false;
+let rewardedAd: RewardedAd | null = null;
+
+function loadRewarded() {
+  rewardedAd = RewardedAd.createForAdRequest(REWARDED_ID);
+
+  rewardedAd.addAdEventListener(RewardedAdEventType.LOADED, () => {
+    rewardedLoaded = true;
+  });
+
+  rewardedAd.addAdEventListener(AdEventType.CLOSED, () => {
+    rewardedLoaded = false;
+    setTimeout(loadRewarded, 1000);
+  });
+
+  rewardedAd.addAdEventListener(AdEventType.ERROR, () => {
+    rewardedLoaded = false;
+    setTimeout(loadRewarded, 30000);
+  });
+
+  rewardedAd.load();
+}
+
+export function showRewarded(onReward: () => void): boolean {
+  if (!rewardedLoaded || !rewardedAd) return false;
+  try {
+    rewardedAd.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
+      onReward();
+    });
+    rewardedAd.show();
+    rewardedLoaded = false;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function isRewardedReady(): boolean {
-  return false;
+  return rewardedLoaded;
 }
