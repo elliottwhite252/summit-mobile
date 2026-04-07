@@ -301,6 +301,8 @@ export default function Game() {
     writeSave(gs); forceUpdate(n => n + 1);
   }, []);
 
+  const frameCountRef = useRef(0);
+
   const gameLoop = useCallback(() => {
     const gs = gsRef.current;
     if (!gs) return;
@@ -313,7 +315,6 @@ export default function Game() {
       updateGame(gs, input, sfxCallback);
       if ((gs.status as string) === "win") { setStatus("win"); writeSave(gs); stopBGM(); }
       if ((gs.status as string) === "offer") { setStatus("offer"); }
-      // Show interstitial ad every 3 rooms
       if (gs.currentRoom !== prevRoomRef.current) {
         prevRoomRef.current = gs.currentRoom;
         if (gs.currentRoom > 0 && gs.currentRoom % 3 === 0) {
@@ -321,7 +322,11 @@ export default function Game() {
         }
       }
     }
-    setPicture(renderToPicture(gs));
+    // Only render every other frame (30fps) to reduce Skia overhead
+    frameCountRef.current++;
+    if (frameCountRef.current % 2 === 0) {
+      setPicture(renderToPicture(gs));
+    }
     animRef.current = requestAnimationFrame(gameLoop);
   }, [sfxCallback]);
 

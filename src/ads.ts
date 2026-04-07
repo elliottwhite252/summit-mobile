@@ -22,14 +22,17 @@ let initialized = false;
 
 export async function initAds() {
   if (initialized) return;
-  try {
-    await mobileAds().initialize();
-    initialized = true;
-    loadInterstitial();
-    loadRewarded();
-  } catch (e) {
-    console.log("AdMob init failed:", e);
-  }
+  // Delay initialization so it doesn't block app startup
+  setTimeout(async () => {
+    try {
+      await mobileAds().initialize();
+      initialized = true;
+      loadInterstitial();
+      loadRewarded();
+    } catch (e) {
+      console.log("AdMob init failed:", e);
+    }
+  }, 3000);
 }
 
 // ─── Interstitial ────────────────────────────────────────────────────────────

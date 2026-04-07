@@ -154,7 +154,7 @@ export function spikeHitbox(s: Spike): Rect {
 
 export function createSnow(): Snowflake[] {
   const flakes: Snowflake[] = [];
-  for (let i = 0; i < 80; i++) {
+  for (let i = 0; i < 30; i++) {
     flakes.push({ x: Math.random() * GAME_W, y: Math.random() * GAME_H, speed: 0.3 + Math.random() * 0.8, drift: Math.random() * 0.5 - 0.25, size: 1 + Math.random() * 2 });
   }
   return flakes;
