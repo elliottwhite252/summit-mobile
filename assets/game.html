@@ -90,11 +90,10 @@ const COSMETICS=[{id:"hair_blue",type:"hair",name:"Ocean Light",cost:10,color:"#
 // ─── Canvas ───
 const canvas=document.getElementById('c');const ctx=canvas.getContext('2d');
 let cw=window.innerWidth,ch=window.innerHeight;canvas.width=cw;canvas.height=ch;
-let ctrlH=72;
-let scale=Math.min(cw/W,(ch-ctrlH)/H),ox=(cw-W*scale)/2,oy=((ch-ctrlH)-H*scale)/2;
-// Fill edge-to-edge: stretch to fill width, let height adjust
-scale=cw/W;oy=0;ox=0;
-window.addEventListener('resize',()=>{cw=window.innerWidth;ch=window.innerHeight;canvas.width=cw;canvas.height=ch;scale=cw/W;ox=0;oy=0});
+let ctrlH=75;
+function calcScale(){scale=Math.min(cw/W,(ch-ctrlH)/H);ox=(cw-W*scale)/2;oy=((ch-ctrlH)-H*scale)/2}
+let scale,ox,oy;calcScale();
+window.addEventListener('resize',()=>{cw=window.innerWidth;ch=window.innerHeight;canvas.width=cw;canvas.height=ch;calcScale()});
 
 // ─── Input ───
 let inp={left:false,right:false,jump:false,jjp:false,dash:false,up:false,down:false};
