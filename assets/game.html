@@ -7,10 +7,8 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#0a0a12;touch-action:none;user-select:none;-webkit-user-select:none}
 canvas{display:block;position:absolute;top:0;left:0}
-.ctrl{position:fixed;bottom:10px;display:flex;align-items:center;gap:8px;z-index:10}
-.ctrl-l{left:10px}
-.ctrl-r{right:10px}
-.ctrl-c{left:50%;transform:translateX(-50%)}
+.ctrl-bar{position:fixed;bottom:0;left:0;width:100%;height:80px;background:rgba(10,10,18,0.95);display:flex;align-items:center;justify-content:space-between;padding:0 10px;z-index:10}
+.ctrl{display:flex;align-items:center;gap:8px}
 .btn{width:56px;height:56px;border-radius:28px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.5);font:bold 11px monospace}
 .btn-jump{border-color:rgba(180,160,255,0.4);background:rgba(180,160,255,0.08)}
 .btn-dash{border-color:rgba(255,180,200,0.4);background:rgba(255,180,200,0.08)}
@@ -41,20 +39,22 @@ canvas{display:block;position:absolute;top:0;left:0}
 </div>
 
 <div id="controls" style="display:none">
-<div class="ctrl ctrl-l" style="gap:20px">
-<div class="btn btn-sq" style="width:62px;height:62px" ontouchstart="inp.left=true" ontouchend="inp.left=false">◀</div>
-<div class="btn btn-sq" style="width:62px;height:62px" ontouchstart="inp.right=true" ontouchend="inp.right=false">▶</div>
+<div class="ctrl-bar">
+<div class="ctrl" style="gap:16px">
+<div class="btn btn-sq" style="width:60px;height:60px" ontouchstart="inp.left=true" ontouchend="inp.left=false">◀</div>
+<div class="btn btn-sq" style="width:60px;height:60px" ontouchstart="inp.right=true" ontouchend="inp.right=false">▶</div>
 </div>
-<div class="ctrl ctrl-c">
-<div id="boosterBtn" style="display:none"><div class="btn" style="width:44px;height:44px;border-radius:22px;border-color:rgba(241,196,15,0.4);background:rgba(241,196,15,0.08);font-size:18px" ontouchstart="activateBooster()">⚡</div></div>
+<div class="ctrl" style="gap:6px">
+<div id="boosterBtn" style="display:none"><div class="btn" style="width:40px;height:40px;border-radius:20px;border-color:rgba(241,196,15,0.4);background:rgba(241,196,15,0.08);font-size:16px" ontouchstart="activateBooster()">⚡</div></div>
 <button class="mute-btn" id="sfxBtn" ontouchstart="toggleSfx()">🔊</button>
 <button class="mute-btn" id="musBtn" ontouchstart="toggleMus()">🎵</button>
 <button class="shop-btn" ontouchstart="openShop()">🪙 SHOP</button>
 <button class="shop-btn" ontouchstart="backToMenu()" style="background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08);color:#666">☰</button>
 </div>
-<div class="ctrl ctrl-r">
-<div class="btn btn-dash" ontouchstart="inp.dash=true" ontouchend="inp.dash=false">DASH</div>
-<div class="btn btn-jump" ontouchstart="inp.jump=true;inp.jjp=true" ontouchend="inp.jump=false">JUMP</div>
+<div class="ctrl" style="gap:12px">
+<div class="btn btn-dash" style="width:60px;height:60px" ontouchstart="inp.dash=true" ontouchend="inp.dash=false">DASH</div>
+<div class="btn btn-jump" style="width:60px;height:60px" ontouchstart="inp.jump=true;inp.jjp=true" ontouchend="inp.jump=false">JUMP</div>
+</div>
 </div>
 </div>
 
@@ -92,9 +92,14 @@ const COSMETICS=[{id:"hair_blue",type:"hair",name:"Ocean Light",cost:10,color:"#
 // ─── Canvas ───
 const canvas=document.getElementById('c');const ctx=canvas.getContext('2d');
 let cw=window.innerWidth,ch=window.innerHeight;canvas.width=cw;canvas.height=ch;
-let ctrlH=75;
+let ctrlH=80;
 let scale,ox=0,oy=0;
-function calcScale(){scale=cw/W;ox=0;oy=0}
+function calcScale(){
+  const availH=ch-ctrlH;
+  scale=Math.min(cw/W,availH/H);
+  ox=(cw-W*scale)/2;
+  oy=(availH-H*scale)/2;
+}
 calcScale();
 window.addEventListener('resize',()=>{cw=window.innerWidth;ch=window.innerHeight;canvas.width=cw;canvas.height=ch;calcScale()});
 
