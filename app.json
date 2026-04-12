@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Ascent",
-    "slug": "ascent-mobile",
+    "name": "Drift",
+    "slug": "drift-mobile",
     "version": "1.0.0",
     "orientation": "landscape",
     "icon": "./assets/icon.png",
