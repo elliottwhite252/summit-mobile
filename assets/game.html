@@ -34,7 +34,7 @@ canvas{display:block;position:absolute;top:0;left:0}
 <div style="font-size:40px;margin-bottom:12px;opacity:0.6">💭</div>
 <h1>DRIFT</h1>
 <div class="sub">some dreams you have to fall through to wake up</div>
-<button class="start-btn" ontouchstart="startGame()" onclick="startGame()">enter the dream</button>
+<button class="start-btn" ontouchstart="startGame();event.preventDefault()">enter the dream</button>
 </div>
 </div>
 
@@ -67,7 +67,7 @@ canvas{display:block;position:absolute;top:0;left:0}
 // ─── Constants ───
 // Dynamic game dimensions — match screen aspect ratio
 const screenR=Math.max(window.innerWidth,window.innerHeight)/Math.min(window.innerWidth,window.innerHeight);
-const W=Math.round(500*screenR),H=500,TILE=20,GRAVITY=0.55,MAX_FALL=8,PLAYER_SPEED=3.2,JUMP_FORCE=-9.5,JUMP_CUT=-3,WALL_SLIDE_SPEED=1.2,WALL_JUMP_H=5,WALL_JUMP_V=-9,DASH_SPEED=10,DASH_DURATION=8,DASH_COOLDOWN=4,COYOTE_FRAMES=6,JUMP_BUFFER_FRAMES=6,CRUMBLE_DELAY=18,CRUMBLE_RESPAWN=180,SPRING_FORCE=-13,PW=12,PH=16,HAIR_COUNT=5,HALF_GRAV_THRESHOLD=-2,CORNER_CORRECTION=4,WALL_JUMP_FORGIVENESS=4,DEFAULT_HAIR="#c4b5fd";
+const W=Math.min(900,Math.round(500*screenR)),H=500,TILE=20,GRAVITY=0.55,MAX_FALL=8,PLAYER_SPEED=3.2,JUMP_FORCE=-9.5,JUMP_CUT=-3,WALL_SLIDE_SPEED=1.2,WALL_JUMP_H=5,WALL_JUMP_V=-9,DASH_SPEED=10,DASH_DURATION=8,DASH_COOLDOWN=4,COYOTE_FRAMES=6,JUMP_BUFFER_FRAMES=6,CRUMBLE_DELAY=18,CRUMBLE_RESPAWN=180,SPRING_FORCE=-13,PW=12,PH=16,HAIR_COUNT=5,HALF_GRAV_THRESHOLD=-2,CORNER_CORRECTION=4,WALL_JUMP_FORGIVENESS=4,DEFAULT_HAIR="#c4b5fd";
 
 // ─── Room Themes ───
 const ROOM_THEMES=[
@@ -79,7 +79,7 @@ const ROOM_THEMES=[
   {name:"Resilience",bg1:"#081a10",bg2:"#0f2a18",accent:"#40b870",particle:"#30d060",platColor:"rgba(64,184,112,0.2)",platEdge:"rgba(64,184,112,0.4)",spikeColor:"#1a5c30",playerTint:"#40b870"},
   {name:"Love",bg1:"#1a0820",bg2:"#2a1038",accent:"#c060d0",particle:"#e080f0",platColor:"rgba(192,96,208,0.2)",platEdge:"rgba(192,96,208,0.4)",spikeColor:"#6a2080",playerTint:"#c060d0"},
   {name:"Confession",bg1:"#121218",bg2:"#1a1a28",accent:"#8080a0",particle:"#a0a0c0",platColor:"rgba(128,128,160,0.2)",platEdge:"rgba(128,128,160,0.35)",spikeColor:"#404060",playerTint:"#8080a0"},
-  {name:"Despair",bg1:"#050508",bg2:"#0a0a10",accent:"#3040608",particle:"#202838",platColor:"rgba(48,64,96,0.15)",platEdge:"rgba(48,64,96,0.3)",spikeColor:"#1a2030",playerTint:"#304060"},
+  {name:"Despair",bg1:"#050508",bg2:"#0a0a10",accent:"#304060",particle:"#202838",platColor:"rgba(48,64,96,0.15)",platEdge:"rgba(48,64,96,0.3)",spikeColor:"#1a2030",playerTint:"#304060"},
   {name:"Defiance",bg1:"#200808",bg2:"#380808",accent:"#e04040",particle:"#ff6030",platColor:"rgba(224,64,64,0.2)",platEdge:"rgba(224,64,64,0.4)",spikeColor:"#a02020",playerTint:"#e04040"},
   {name:"Release",bg1:"#141828",bg2:"#202840",accent:"#a0c0e0",particle:"#c0d8f0",platColor:"rgba(160,192,224,0.2)",platEdge:"rgba(160,192,224,0.4)",spikeColor:"#506080",playerTint:"#a0c0e0"},
   {name:"Awakening",bg1:"#1a1a1a",bg2:"#2a2a2a",accent:"#e0e0e0",particle:"#ffffff",platColor:"rgba(224,224,224,0.2)",platEdge:"rgba(224,224,224,0.5)",spikeColor:"#808080",playerTint:"#e0e0e0"}
@@ -219,7 +219,7 @@ function startGame(){
     coins:save.coins,ownedCosmetics:new Set(save.owned),equippedHair:save.eqHair,equippedTrail:save.eqTrail,equippedDeathEffect:save.eqDeath,
     activeBooster:null,shieldActive:false,doubleDashActive:false,checkpoint:null,slowMoFrames:0,springBoostActive:false,
     starterPackBought:save.starterPack,roomDeaths:0,offerBooster:null,transitionTimer:0,transitionDir:0,roomTitleTimer:90,
-    speedrunTime:0,memoriesFound:[],showingMemory:null,memoryTimer:0};
+    speedrunTime:0,speedrunStart:performance.now(),memoriesFound:[],showingMemory:null,memoryTimer:0};
   prevRoom=0;if(loopId){cancelAnimationFrame(loopId);loopId=null}
   document.getElementById('overlay').classList.add('hidden');document.getElementById('overlay').style.display='none';
   document.getElementById('controls').style.display='block';document.getElementById('winOverlay').style.display='none';
@@ -229,7 +229,8 @@ function startGame(){
 // ─── Update (same physics, unchanged) ───
 function update(){
   if(!gs||gs.status!=='playing')return;
-  const sm=gs.slowMoFrames>0?.5:1;gs.time++;gs.speedrunTime++;const p=gs.player;const room=gs.rooms[gs.currentRoom];
+  const sm=gs.slowMoFrames>0?.5:1;gs.time++;const p=gs.player;const room=gs.rooms[gs.currentRoom];
+  if(!p.dead)gs.speedrunTime=performance.now()-gs.speedrunStart;
   if(gs.memoryTimer>0)gs.memoryTimer--;
   // Ambient particles
   for(const s of gs.ambientParticles){
@@ -385,7 +386,7 @@ function render(){
   if(gs.activeBooster){const b=BOOSTERS.find(b=>b.id===gs.activeBooster);if(b){ctx.fillStyle="rgba(0,0,0,0.3)";ctx.fillRect(W/2-45,34,90,18);ctx.fillStyle="rgba(255,200,100,0.6)";ctx.font="bold 10px monospace";ctx.fillText(b.name,W/2-35,48)}}
   if(gs.slowMoFrames>0){ctx.fillStyle=t.accent+"40";ctx.fillRect(0,0,W*(gs.slowMoFrames/300),2)}
   // Speedrun timer
-  const totalSec=gs.speedrunTime/60;const mins=totalSec/60|0;const secs=totalSec%60|0;const ms=((totalSec%1)*100)|0;
+  const totalSec=gs.speedrunTime/1000;const mins=totalSec/60|0;const secs=totalSec%60|0;const ms=((totalSec%1)*100)|0;
   ctx.fillStyle="rgba(255,255,255,0.2)";ctx.font="bold 12px monospace";ctx.fillText((mins<10?"0":"")+mins+":"+(secs<10?"0":"")+secs+"."+(ms<10?"0":"")+ms,W/2-30,H-8);
   // Story fragment display
   if(gs.showingMemory&&gs.memoryTimer>0){
@@ -402,22 +403,22 @@ function openShop(){if(!gs)return;gs.status="shop";stopBGM();renderShop()}
 function closeShop(){if(!gs)return;gs.status="playing";document.getElementById('shop').classList.remove('visible');startBGM()}
 function renderShop(){
   const s=document.getElementById('shop');s.classList.add('visible');
-  let h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="color:#c4b5fd;font-size:18px;font-weight:bold">💭 SHOP</span><span style="color:#f1c40f;font-weight:bold">🪙 '+gs.coins+'</span><button ontouchstart="closeShop()" onclick="closeShop()" style="background:rgba(255,255,255,0.08);color:#888;border:none;padding:6px 12px;border-radius:4px;font:12px monospace">✕</button></div>';
+  let h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="color:#c4b5fd;font-size:18px;font-weight:bold">💭 SHOP</span><span style="color:#f1c40f;font-weight:bold">🪙 '+gs.coins+'</span><button ontouchstart="closeShop();event.preventDefault()" style="background:rgba(255,255,255,0.08);color:#888;border:none;padding:6px 12px;border-radius:4px;font:12px monospace">✕</button></div>';
   if(!gs.starterPackBought){
     h+='<div style="background:linear-gradient(135deg,#1a0830,#2d1060);border:1px solid rgba(180,160,255,0.3);border-radius:10px;padding:12px;margin-bottom:10px">';
     h+='<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="font-size:16px">⭐</span><span style="color:#c4b5fd;font-weight:bold;font-size:12px">DREAM PACK</span><span style="margin-left:auto;background:#7c3aed;color:#fff;padding:2px 6px;border-radius:8px;font-size:8px;font-weight:bold">BEST VALUE</span></div>';
     h+='<div style="display:flex;align-items:center"><div style="flex:1;font-size:10px;color:rgba(255,255,255,0.5)"><div>✦ Aurora Light (Exclusive)</div><div>✦ Aurora Trail (Exclusive)</div><div style="color:#f1c40f;margin-top:2px">+ 100 🪙</div></div>';
-    h+='<button ontouchstart="buyStarterPack()" onclick="buyStarterPack()" style="background:#7c3aed;color:#fff;border:none;padding:8px 14px;border-radius:8px;font:bold 13px monospace">$0.99</button></div></div>'}
-  h+='<button ontouchstart="watchAd()" onclick="watchAd()" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:#10b981;padding:8px;border-radius:6px;width:100%;font:bold 12px monospace;margin-bottom:10px">🎬 Watch Ad for 5 🪙</button>';
+    h+='<button ontouchstart="buyStarterPack();event.preventDefault()" style="background:#7c3aed;color:#fff;border:none;padding:8px 14px;border-radius:8px;font:bold 13px monospace">$0.99</button></div></div>'}
+  h+='<button ontouchstart="watchAd();event.preventDefault()" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:#10b981;padding:8px;border-radius:6px;width:100%;font:bold 12px monospace;margin-bottom:10px">🎬 Watch Ad for 5 🪙</button>';
   h+='<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:6px">BOOSTERS</div>';
   for(const b of BOOSTERS){const active=gs.activeBooster===b.id;const afford=gs.coins>=b.cost;
-    h+='<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px;margin-bottom:4px;display:flex;align-items:center"><span style="font-size:18px;margin-right:8px">'+b.icon+'</span><div style="flex:1"><div style="color:rgba(255,255,255,0.8);font-size:11px;font-weight:bold">'+b.name+'</div><div style="color:rgba(255,255,255,0.3);font-size:9px">'+b.desc+'</div></div><button ontouchstart="buyBooster(\''+b.id+'\')" onclick="buyBooster(\''+b.id+'\')" style="background:'+(active?'rgba(100,200,100,0.2)':afford?'rgba(241,196,15,0.15)':'rgba(255,255,255,0.05)')+';color:'+(active?'#6ddb6d':afford?'#f1c40f':'#444')+';border:1px solid '+(active?'rgba(100,200,100,0.3)':afford?'rgba(241,196,15,0.2)':'rgba(255,255,255,0.05)')+';padding:4px 8px;border-radius:4px;font:bold 10px monospace">'+(active?'ACTIVE':'🪙 '+b.cost)+'</button></div>'}
+    h+='<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px;margin-bottom:4px;display:flex;align-items:center"><span style="font-size:18px;margin-right:8px">'+b.icon+'</span><div style="flex:1"><div style="color:rgba(255,255,255,0.8);font-size:11px;font-weight:bold">'+b.name+'</div><div style="color:rgba(255,255,255,0.3);font-size:9px">'+b.desc+'</div></div><button ontouchstart="buyBooster(\''+b.id+'\');event.preventDefault()" style="background:'+(active?'rgba(100,200,100,0.2)':afford?'rgba(241,196,15,0.15)':'rgba(255,255,255,0.05)')+';color:'+(active?'#6ddb6d':afford?'#f1c40f':'#444')+';border:1px solid '+(active?'rgba(100,200,100,0.3)':afford?'rgba(241,196,15,0.2)':'rgba(255,255,255,0.05)')+';padding:4px 8px;border-radius:4px;font:bold 10px monospace">'+(active?'ACTIVE':'🪙 '+b.cost)+'</button></div>'}
   h+='<div style="font-size:10px;color:rgba(255,255,255,0.3);margin:8px 0 6px">COSMETICS</div>';
   for(const type of["hair","trail","deathEffect"]){
     h+='<div style="font-size:8px;color:rgba(255,255,255,0.2);margin:6px 0 3px;text-transform:uppercase">'+(type==="hair"?"Light Colors":type==="trail"?"Dash Trails":"Dissolve Effects")+'</div>';
     for(const c of COSMETICS.filter(c=>c.type===type&&!c.id.includes('aurora'))){
       const owned=gs.ownedCosmetics.has(c.id);const eq=(type==="hair"&&gs.equippedHair===c.id)||(type==="trail"&&gs.equippedTrail===c.id)||(type==="deathEffect"&&gs.equippedDeathEffect===c.id);
-      h+='<button ontouchstart="buyCosmetic(\''+c.id+'\')" onclick="buyCosmetic(\''+c.id+'\')" style="display:flex;align-items:center;gap:6px;width:100%;background:'+(eq?'rgba(180,160,255,0.12)':'rgba(255,255,255,0.03)')+';border:'+(eq?'1px solid rgba(180,160,255,0.3)':'1px solid transparent')+';border-radius:6px;padding:5px;margin-bottom:2px;color:rgba(255,255,255,0.7);font:11px monospace"><span style="width:10px;height:10px;border-radius:5px;background:'+c.color+';box-shadow:0 0 6px '+c.color+'"></span>'+c.name+(owned?(eq?' ✓':' EQUIP'):' <span style=color:#f1c40f>🪙'+c.cost+'</span>')+'</button>'}}
+      h+='<button ontouchstart="buyCosmetic(\''+c.id+'\');event.preventDefault()" style="display:flex;align-items:center;gap:6px;width:100%;background:'+(eq?'rgba(180,160,255,0.12)':'rgba(255,255,255,0.03)')+';border:'+(eq?'1px solid rgba(180,160,255,0.3)':'1px solid transparent')+';border-radius:6px;padding:5px;margin-bottom:2px;color:rgba(255,255,255,0.7);font:11px monospace"><span style="width:10px;height:10px;border-radius:5px;background:'+c.color+';box-shadow:0 0 6px '+c.color+'"></span>'+c.name+(owned?(eq?' ✓':' EQUIP'):' <span style=color:#f1c40f>🪙'+c.cost+'</span>')+'</button>'}}
   s.innerHTML=h}
 function buyBooster(id){if(!gs)return;const b=BOOSTERS.find(b=>b.id===id);if(!b||gs.coins<b.cost)return;gs.coins-=b.cost;gs.activeBooster=id;if(id==="shield")gs.shieldActive=true;if(id==="doubleDash")gs.doubleDashActive=true;if(id==="springBoost")gs.springBoostActive=true;sfx("buy");writeSave();renderShop()}
 function buyCosmetic(id){if(!gs)return;const c=COSMETICS.find(c=>c.id===id);if(!c)return;if(gs.ownedCosmetics.has(id)){if(c.type==="hair"){gs.equippedHair=id;gs.player.hairColor=c.color}else if(c.type==="trail")gs.equippedTrail=id;else if(c.type==="deathEffect")gs.equippedDeathEffect=id}else{if(gs.coins<c.cost)return;gs.coins-=c.cost;gs.ownedCosmetics.add(id);sfx("buy")}writeSave();renderShop()}
@@ -428,13 +429,13 @@ window.onRewardedAdComplete=function(){if(gs){gs.coins+=5;sfx("coin");writeSave(
 // ─── Offer ───
 function showOffer(){const b=BOOSTERS.find(b=>b.id===gs.offerBooster);if(!b)return;const afford=gs.coins>=b.cost;const t=ROOM_THEMES[gs.currentRoom];
   const o=document.getElementById('offer');o.classList.add('visible');
-  o.innerHTML='<div style="background:rgba(10,10,18,0.95);border:1px solid '+t.accent+'40;border-radius:16px;padding:20px;max-width:260px;text-align:center"><p style="color:rgba(255,255,255,0.3);font-size:11px;margin-bottom:8px">the dream resists...</p><div style="font-size:28px;margin-bottom:4px">'+b.icon+'</div><div style="color:'+t.accent+';font-size:16px;font-weight:bold;margin-bottom:4px">'+b.name+'</div><p style="color:rgba(255,255,255,0.3);font-size:11px;margin-bottom:16px">'+b.desc+'</p><div style="display:flex;gap:8px;justify-content:center"><button ontouchstart="acceptOffer()" onclick="acceptOffer()" style="background:'+(afford?'rgba(241,196,15,0.15)':'rgba(255,255,255,0.05)')+';color:'+(afford?'#f1c40f':'#444')+';border:1px solid '+(afford?'rgba(241,196,15,0.2)':'transparent')+';padding:8px 14px;border-radius:6px;font:bold 12px monospace">'+(afford?'🪙 '+b.cost+' — BUY':'Need '+b.cost)+'</button><button ontouchstart="declineOffer()" onclick="declineOffer()" style="background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.3);border:none;padding:8px 14px;border-radius:6px;font:bold 12px monospace">drift on</button></div></div>'}
+  o.innerHTML='<div style="background:rgba(10,10,18,0.95);border:1px solid '+t.accent+'40;border-radius:16px;padding:20px;max-width:260px;text-align:center"><p style="color:rgba(255,255,255,0.3);font-size:11px;margin-bottom:8px">the dream resists...</p><div style="font-size:28px;margin-bottom:4px">'+b.icon+'</div><div style="color:'+t.accent+';font-size:16px;font-weight:bold;margin-bottom:4px">'+b.name+'</div><p style="color:rgba(255,255,255,0.3);font-size:11px;margin-bottom:16px">'+b.desc+'</p><div style="display:flex;gap:8px;justify-content:center"><button ontouchstart="acceptOffer();event.preventDefault()" style="background:'+(afford?'rgba(241,196,15,0.15)':'rgba(255,255,255,0.05)')+';color:'+(afford?'#f1c40f':'#444')+';border:1px solid '+(afford?'rgba(241,196,15,0.2)':'transparent')+';padding:8px 14px;border-radius:6px;font:bold 12px monospace">'+(afford?'🪙 '+b.cost+' — BUY':'Need '+b.cost)+'</button><button ontouchstart="declineOffer();event.preventDefault()" style="background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.3);border:none;padding:8px 14px;border-radius:6px;font:bold 12px monospace">drift on</button></div></div>'}
 function acceptOffer(){const b=BOOSTERS.find(b=>b.id===gs.offerBooster);if(b&&gs.coins>=b.cost){gs.coins-=b.cost;gs.activeBooster=b.id;if(b.id==="shield")gs.shieldActive=true;if(b.id==="doubleDash")gs.doubleDashActive=true;if(b.id==="springBoost")gs.springBoostActive=true;sfx("buy");writeSave()}gs.offerBooster=null;gs.status="playing";document.getElementById('offer').classList.remove('visible')}
 function declineOffer(){gs.offerBooster=null;gs.status="playing";document.getElementById('offer').classList.remove('visible')}
 
 // ─── Win ───
 function showWin(){
-  const totalSec=gs.speedrunTime/60;const mins=totalSec/60|0;const secs=totalSec%60|0;const ms=((totalSec%1)*100)|0;
+  const totalSec=gs.speedrunTime/1000;const mins=totalSec/60|0;const secs=totalSec%60|0;const ms=((totalSec%1)*100)|0;
   const timeStr=(mins<10?"0":"")+mins+":"+(secs<10?"0":"")+secs+"."+(ms<10?"0":"")+ms;
   // Save best time
   let bestTimes=[];try{const bt=localStorage.getItem("drift_best_times");if(bt)bestTimes=JSON.parse(bt)}catch{}
@@ -446,10 +447,10 @@ function showWin(){
   let storyHtml='';if(gs.memoriesFound.length>0){storyHtml='<div style="margin:12px 0;max-height:100px;overflow-y:auto;text-align:left;padding:0 20px">';for(const f of gs.memoriesFound)storyHtml+='<p style="color:rgba(255,255,255,0.4);font-size:10px;font-style:italic;margin:3px 0">'+f+'</p>';storyHtml+='</div>'}
   // Leaderboard
   let lbHtml='<div style="margin-top:12px;font-size:10px;color:rgba(255,255,255,0.3)">best times</div>';
-  for(let i=0;i<bestTimes.length;i++){const bt=bestTimes[i];const bSec=bt.time/60;const bM=bSec/60|0;const bS=bSec%60|0;const bMs=((bSec%1)*100)|0;
+  for(let i=0;i<bestTimes.length;i++){const bt=bestTimes[i];const bSec=bt.time/1000;const bM=bSec/60|0;const bS=bSec%60|0;const bMs=((bSec%1)*100)|0;
     lbHtml+='<div style="color:rgba(255,255,255,'+(i===0?'0.6':'0.25')+');font-size:10px">'+(i+1)+'. '+(bM<10?'0':'')+bM+':'+(bS<10?'0':'')+bS+'.'+(bMs<10?'0':'')+bMs+' — '+bt.deaths+'✕ '+bt.memories+'◈</div>'}
   const w=document.getElementById('winOverlay');w.style.display='flex';
-  w.innerHTML='<div style="text-align:center;font-family:monospace;max-height:90vh;overflow-y:auto"><div style="font-size:40px;margin-bottom:8px;opacity:0.6">✨</div><h2 style="font-size:28px;color:#c4b5fd;margin-bottom:4px;letter-spacing:6px;text-shadow:0 0 30px rgba(180,160,255,0.5)">AWAKENED</h2><p style="font-size:10px;color:rgba(255,255,255,0.3);font-style:italic;margin-bottom:8px">you drifted through every dream</p>'+(isNewBest?'<p style="color:#f1c40f;font-size:11px">★ NEW BEST TIME ★</p>':'')+'<p style="color:#c4b5fd;font-size:18px;margin:8px 0">'+timeStr+'</p><p style="color:rgba(255,100,100,0.6);font-size:12px">✕ '+gs.deaths+' deaths</p><p style="color:rgba(255,255,255,0.4);font-size:12px">◈ '+gs.strawberriesCollected+'/'+gs.totalStrawberries+' memories</p>'+storyHtml+lbHtml+'<button ontouchstart="startGame()" onclick="startGame()" style="margin-top:16px;background:rgba(180,160,255,0.15);border:1px solid rgba(180,160,255,0.3);color:#c4b5fd;padding:12px 24px;border-radius:20px;font:bold 14px monospace">dream again</button></div>'}
+  w.innerHTML='<div style="text-align:center;font-family:monospace;max-height:90vh;overflow-y:auto"><div style="font-size:40px;margin-bottom:8px;opacity:0.6">✨</div><h2 style="font-size:28px;color:#c4b5fd;margin-bottom:4px;letter-spacing:6px;text-shadow:0 0 30px rgba(180,160,255,0.5)">AWAKENED</h2><p style="font-size:10px;color:rgba(255,255,255,0.3);font-style:italic;margin-bottom:8px">you drifted through every dream</p>'+(isNewBest?'<p style="color:#f1c40f;font-size:11px">★ NEW BEST TIME ★</p>':'')+'<p style="color:#c4b5fd;font-size:18px;margin:8px 0">'+timeStr+'</p><p style="color:rgba(255,100,100,0.6);font-size:12px">✕ '+gs.deaths+' deaths</p><p style="color:rgba(255,255,255,0.4);font-size:12px">◈ '+gs.strawberriesCollected+'/'+gs.totalStrawberries+' memories</p>'+storyHtml+lbHtml+'<button ontouchstart="startGame();event.preventDefault()" style="margin-top:16px;background:rgba(180,160,255,0.15);border:1px solid rgba(180,160,255,0.3);color:#c4b5fd;padding:12px 24px;border-radius:20px;font:bold 14px monospace">dream again</button></div>'}
 
 // ─── Booster / Menu ───
 function activateBooster(){if(!gs)return;if(gs.activeBooster==="slowmo"&&gs.slowMoFrames<=0){gs.slowMoFrames=300;gs.activeBooster=null;sfx("buy")}if(gs.activeBooster==="checkpoint"&&!gs.checkpoint){gs.checkpoint={x:gs.player.x,y:gs.player.y};gs.activeBooster=null;sfx("buy")}}
