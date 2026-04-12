@@ -51,6 +51,7 @@ canvas{display:block;position:absolute;top:0;left:0}
 <button class="mute-btn" id="sfxBtn" ontouchstart="toggleSfx()">🔊</button>
 <button class="mute-btn" id="musBtn" ontouchstart="toggleMus()">🎵</button>
 <button class="shop-btn" ontouchstart="openShop()">🪙 SHOP</button>
+<button class="shop-btn" ontouchstart="openJournal()" style="background:rgba(180,160,255,0.08);border-color:rgba(180,160,255,0.2);color:#c4b5fd">◈</button>
 <button class="shop-btn" ontouchstart="backToMenu()" style="background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08);color:#666">☰</button>
 </div>
 <div class="ctrl" style="gap:12px">
@@ -217,6 +218,9 @@ showStreakDisplay();
 function curThemeIdx(){return dailyMode?(gs?.dailyThemeIdx||0):gs?.currentRoom||0}
 function curTheme(){return ROOM_THEMES[curThemeIdx()]||ROOM_THEMES[0]}
 
+// Haptic feedback
+function haptic(ms){try{navigator.vibrate?.(ms)}catch{}}
+
 function getHC(){if(gs.equippedHair){const c=COSMETICS.find(c=>c.id===gs.equippedHair);if(c)return c.color}return DEFAULT_HAIR}
 function getTC(){if(gs.equippedTrail){const c=COSMETICS.find(c=>c.id===gs.equippedTrail);if(c)return c.color}return"#e0c0ff"}
 function getDC(){if(gs.equippedDeathEffect){const c=COSMETICS.find(c=>c.id===gs.equippedDeathEffect);if(c)return[c.color,"#fff"]}return[DEFAULT_HAIR,"#fff"]}
@@ -281,7 +285,7 @@ let gs=null;let prevRoom=0;
 function spawnP(x,y,color,count,spread){spread=spread||4;for(let i=0;i<count;i++)gs.particles.push({x,y,vx:(Math.random()-.5)*spread,vy:(Math.random()-.5)*spread-1,life:1,color,size:1+Math.random()*3})}
 function killPlayer(){
   if(gs.shieldActive){gs.shieldActive=false;gs.activeBooster=null;sfx("buy");spawnP(gs.player.x+PW/2,gs.player.y+PH/2,"#f1c40f",15,6);gs.player.vy=JUMP_FORCE*.5;gs.screenShake=4;return}
-  const p=gs.player;p.dead=true;p.deadTimer=20;gs.deaths++;gs.roomDeaths++;gs.screenShake=8;sfx("death");
+  const p=gs.player;p.dead=true;p.deadTimer=20;gs.deaths++;gs.roomDeaths++;gs.screenShake=8;sfx("death");haptic(50);
   const dc=getDC();spawnP(p.x+PW/2,p.y+PH/2,dc[0],20,8);spawnP(p.x+PW/2,p.y+PH/2,dc[1],10,6);
   if(gs.roomDeaths%3===0&&!gs.activeBooster&&gs.coins>=3){
     if(gs.coins>=3)gs.offerBooster="slowmo";if(gs.coins>=5&&gs.roomDeaths>=6)gs.offerBooster="checkpoint";if(gs.coins>=8&&gs.roomDeaths>=9)gs.offerBooster="shield";p.deadTimer=25}
@@ -320,20 +324,20 @@ function update(){
     else{s.y+=s.speed*.3;s.x+=s.drift+Math.sin(gs.time*.01+s.x)*.15} // gentle drift
     if(s.y>H){s.y=-5;s.x=Math.random()*W}if(s.y<-5){s.y=H;s.x=Math.random()*W}if(s.x>W)s.x=0;if(s.x<0)s.x=W}
   if(gs.screenShake>0)gs.screenShake-=.5;if(gs.slowMoFrames>0)gs.slowMoFrames--;if(gs.roomTitleTimer>0)gs.roomTitleTimer--;
-  if(p.dead){p.deadTimer--;if(p.deadTimer<=0){respawnPlayer();if(gs.offerBooster){gs.status="offer";showOffer();return}}
+  if(p.dead){p.deadTimer--;if(p.deadTimer<=0){respawnPlayer();if(gs.offerBooster){gs.status="offer";showOffer();return}if(gs.roomDeaths>0&&gs.roomDeaths%5===0&&!gs.offerBooster){gs.status="offer";showContinueOffer();return}}
     gs.particles=gs.particles.filter(pt=>{pt.x+=pt.vx;pt.y+=pt.vy;pt.vy+=.1;pt.life-=.04;return pt.life>0});return}
   if(p.dashing<=0){if(inp.left){p.vx=-PLAYER_SPEED*sm;p.facing=-1}else if(inp.right){p.vx=PLAYER_SPEED*sm;p.facing=1}else p.vx*=.65}
   if(p.grounded)p.coyoteTimer=COYOTE_FRAMES;else p.coyoteTimer=Math.max(0,p.coyoteTimer-1);
   if(inp.jjp){p.jumpBuffer=JUMP_BUFFER_FRAMES;inp.jjp=false}else p.jumpBuffer=Math.max(0,p.jumpBuffer-1);
   if(p.dashing<=0){
-    if(p.jumpBuffer>0&&p.coyoteTimer>0){p.vy=JUMP_FORCE*sm;p.grounded=false;p.coyoteTimer=0;p.jumpBuffer=0;p.jumpHeld=true;sfx("jump");spawnP(p.x+PW/2,p.y+PH,"rgba(255,255,255,0.3)",4)}
+    if(p.jumpBuffer>0&&p.coyoteTimer>0){p.vy=JUMP_FORCE*sm;p.grounded=false;p.coyoteTimer=0;p.jumpBuffer=0;p.jumpHeld=true;sfx("jump");haptic(10);spawnP(p.x+PW/2,p.y+PH,"rgba(255,255,255,0.3)",4)}
     else if(p.jumpBuffer>0&&p.wallDir!==0){p.vx=-p.wallDir*WALL_JUMP_H;p.vy=WALL_JUMP_V*sm;p.facing=-p.wallDir;p.wallDir=0;p.jumpBuffer=0;p.jumpHeld=true;p.canDash=true;p.dashCount=0;sfx("walljump");spawnP(p.x+(p.facing<0?PW:0),p.y+PH/2,"rgba(255,255,255,0.3)",5)}
     if(!inp.jump&&p.vy<JUMP_CUT&&p.jumpHeld){p.vy=JUMP_CUT;p.jumpHeld=false}}
   const maxD=gs.doubleDashActive?2:1;
   if(inp.dash&&p.dashCount<maxD&&p.dashing<=0&&p.dashCooldown<=0){
     let dx=inp.right?1:inp.left?-1:0,dy=inp.up?-1:inp.down?1:0;if(dx===0&&dy===0)dx=p.facing;
     const l=Math.sqrt(dx*dx+dy*dy);p.dashDir={x:dx/l,y:dy/l};p.dashing=DASH_DURATION;p.dashCount++;p.dashCooldown=DASH_COOLDOWN;
-    p.hairColor=getTC();gs.screenShake=3;sfx("dash");spawnP(p.x+PW/2,p.y+PH/2,getTC(),8,3);inp.dash=false}
+    p.hairColor=getTC();gs.screenShake=3;sfx("dash");haptic(20);spawnP(p.x+PW/2,p.y+PH/2,getTC(),8,3);inp.dash=false}
   if(p.dashing>0){p.vx=p.dashDir.x*DASH_SPEED*sm;p.vy=p.dashDir.y*DASH_SPEED*sm;p.dashing--;
     if(gs.time%2===0)gs.particles.push({x:p.x+PW/2,y:p.y+PH/2,vx:0,vy:0,life:.6,color:p.hairColor,size:4})}
   else p.dashCooldown=Math.max(0,p.dashCooldown-1);
@@ -464,6 +468,13 @@ function render(){
   ctx.fillStyle="rgba(255,255,255,0.3)";ctx.fillText((gs.currentRoom+1)+"/"+gs.rooms.length,W-78,24);
   if(gs.activeBooster){const b=BOOSTERS.find(b=>b.id===gs.activeBooster);if(b){ctx.fillStyle="rgba(0,0,0,0.3)";ctx.fillRect(W/2-45,34,90,18);ctx.fillStyle="rgba(255,200,100,0.6)";ctx.font="bold 10px monospace";ctx.fillText(b.name,W/2-35,48)}}
   if(gs.slowMoFrames>0){ctx.fillStyle=t.accent+"40";ctx.fillRect(0,0,W*(gs.slowMoFrames/300),2)}
+  // Tutorial hints (room 1 only)
+  if(gs.currentRoom===0&&!dailyMode){
+    ctx.globalAlpha=Math.max(0,1-gs.time/300);ctx.fillStyle="rgba(255,255,255,0.4)";ctx.font="italic 11px monospace";ctx.textAlign="center";
+    if(gs.time<120)ctx.fillText("hold JUMP for higher",W/2,H-40);
+    else if(gs.time<240)ctx.fillText("tap DASH in the air",W/2,H-40);
+    else if(gs.time<360)ctx.fillText("press into walls to slide & jump",W/2,H-40);
+    ctx.textAlign="left";ctx.globalAlpha=1}
   // Speedrun timer
   const totalSec=gs.speedrunTime/1000;const mins=totalSec/60|0;const secs=totalSec%60|0;const ms=((totalSec%1)*100)|0;
   ctx.fillStyle="rgba(255,255,255,0.2)";ctx.font="bold 12px monospace";ctx.fillText((mins<10?"0":"")+mins+":"+(secs<10?"0":"")+secs+"."+(ms<10?"0":"")+ms,W/2-30,H-8);
@@ -502,8 +513,28 @@ function renderShop(){
 function buyBooster(id){if(!gs)return;const b=BOOSTERS.find(b=>b.id===id);if(!b||gs.coins<b.cost)return;gs.coins-=b.cost;gs.activeBooster=id;if(id==="shield")gs.shieldActive=true;if(id==="doubleDash")gs.doubleDashActive=true;if(id==="springBoost")gs.springBoostActive=true;sfx("buy");writeSave();renderShop()}
 function buyCosmetic(id){if(!gs)return;const c=COSMETICS.find(c=>c.id===id);if(!c)return;if(gs.ownedCosmetics.has(id)){if(c.type==="hair"){gs.equippedHair=id;gs.player.hairColor=c.color}else if(c.type==="trail")gs.equippedTrail=id;else if(c.type==="deathEffect")gs.equippedDeathEffect=id}else{if(gs.coins<c.cost)return;gs.coins-=c.cost;gs.ownedCosmetics.add(id);sfx("buy")}writeSave();renderShop()}
 function buyStarterPack(){if(!gs||gs.starterPackBought)return;gs.starterPackBought=true;gs.coins+=100;gs.ownedCosmetics.add("hair_aurora");gs.ownedCosmetics.add("trail_aurora");gs.equippedHair="hair_aurora";gs.equippedTrail="trail_aurora";gs.player.hairColor="#ff6b9d";sfx("strawberry");sfx("buy");writeSave();renderShop()}
+// ─── Journal ───
+function openJournal(){if(!gs)return;gs.status="shop";stopBGM();
+  const s=document.getElementById('shop');s.classList.add('visible');
+  let h='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><span style="color:#c4b5fd;font-size:18px;font-weight:bold">◈ Memories</span><span style="color:rgba(255,255,255,0.3);font-size:11px">'+gs.memoriesFound.length+'/'+STORY_FRAGMENTS.length+'</span><button ontouchstart="closeShop();event.preventDefault()" style="background:rgba(255,255,255,0.08);color:#888;border:none;padding:6px 12px;border-radius:4px;font:12px monospace">✕</button></div>';
+  // Progress bar
+  h+='<div style="width:100%;height:4px;background:rgba(255,255,255,0.05);border-radius:2px;margin-bottom:16px"><div style="width:'+(gs.memoriesFound.length/STORY_FRAGMENTS.length*100)+'%;height:100%;background:rgba(180,160,255,0.4);border-radius:2px"></div></div>';
+  // Fragments
+  for(let i=0;i<STORY_FRAGMENTS.length;i++){
+    const found=i<gs.memoriesFound.length;
+    h+='<div style="padding:8px 12px;margin-bottom:4px;border-radius:6px;background:rgba(255,255,255,'+(found?'0.04':'0.01')+');border-left:2px solid '+(found?'rgba(180,160,255,0.5)':'rgba(255,255,255,0.05)')+'"><p style="color:'+(found?'rgba(255,255,255,0.6)':'rgba(255,255,255,0.1)')+';font-size:11px;font-style:italic">'+(found?STORY_FRAGMENTS[i]:'· · ·')+'</p></div>';
+  }
+  // Full story reveal
+  if(gs.memoriesFound.length>=STORY_FRAGMENTS.length){
+    h+='<div style="margin-top:16px;padding:12px;border-radius:8px;background:rgba(180,160,255,0.08);border:1px solid rgba(180,160,255,0.2);text-align:center"><p style="color:#c4b5fd;font-size:12px;font-style:italic">you found every memory.</p><p style="color:rgba(255,255,255,0.3);font-size:10px;margin-top:4px">she was never lost — she was finding her way back.</p></div>';
+  }
+  s.innerHTML=h;
+}
+
 function watchAd(){try{window.ReactNativeWebView?.postMessage(JSON.stringify({type:'showRewarded'}))}catch{}}
-window.onRewardedAdComplete=function(){if(gs){gs.coins+=5;sfx("coin");writeSave();renderShop()}}
+window.onRewardedAdComplete=function(){
+  if(window.onRewardedAdContinue){window.onRewardedAdContinue();window.onRewardedAdContinue=null;return}
+  if(gs){gs.coins+=5;sfx("coin");writeSave();renderShop()}}
 
 // ─── Offer ───
 function showOffer(){const b=BOOSTERS.find(b=>b.id===gs.offerBooster);if(!b)return;const afford=gs.coins>=b.cost;const t=curTheme();
@@ -511,6 +542,21 @@ function showOffer(){const b=BOOSTERS.find(b=>b.id===gs.offerBooster);if(!b)retu
   o.innerHTML='<div style="background:rgba(10,10,18,0.95);border:1px solid '+t.accent+'40;border-radius:16px;padding:20px;max-width:260px;text-align:center"><p style="color:rgba(255,255,255,0.3);font-size:11px;margin-bottom:8px">the dream resists...</p><div style="font-size:28px;margin-bottom:4px">'+b.icon+'</div><div style="color:'+t.accent+';font-size:16px;font-weight:bold;margin-bottom:4px">'+b.name+'</div><p style="color:rgba(255,255,255,0.3);font-size:11px;margin-bottom:16px">'+b.desc+'</p><div style="display:flex;gap:8px;justify-content:center"><button ontouchstart="acceptOffer();event.preventDefault()" style="background:'+(afford?'rgba(241,196,15,0.15)':'rgba(255,255,255,0.05)')+';color:'+(afford?'#f1c40f':'#444')+';border:1px solid '+(afford?'rgba(241,196,15,0.2)':'transparent')+';padding:8px 14px;border-radius:6px;font:bold 12px monospace">'+(afford?'🪙 '+b.cost+' — BUY':'Need '+b.cost)+'</button><button ontouchstart="declineOffer();event.preventDefault()" style="background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.3);border:none;padding:8px 14px;border-radius:6px;font:bold 12px monospace">drift on</button></div></div>'}
 function acceptOffer(){const b=BOOSTERS.find(b=>b.id===gs.offerBooster);if(b&&gs.coins>=b.cost){gs.coins-=b.cost;gs.activeBooster=b.id;if(b.id==="shield")gs.shieldActive=true;if(b.id==="doubleDash")gs.doubleDashActive=true;if(b.id==="springBoost")gs.springBoostActive=true;sfx("buy");writeSave()}gs.offerBooster=null;gs.status="playing";document.getElementById('offer').classList.remove('visible')}
 function declineOffer(){gs.offerBooster=null;gs.status="playing";document.getElementById('offer').classList.remove('visible')}
+
+// Continue from death (rewarded ad)
+function showContinueOffer(){
+  const o=document.getElementById('offer');o.classList.add('visible');
+  o.innerHTML='<div style="background:rgba(10,10,18,0.95);border:1px solid rgba(180,160,255,0.3);border-radius:16px;padding:20px;max-width:260px;text-align:center"><p style="color:rgba(255,255,255,0.3);font-size:11px;margin-bottom:8px">you faded...</p><div style="font-size:28px;margin-bottom:8px">💭</div><div style="color:#c4b5fd;font-size:14px;font-weight:bold;margin-bottom:12px">continue from here?</div><div style="display:flex;gap:8px;justify-content:center"><button ontouchstart="watchAdToContinue();event.preventDefault()" style="background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#10b981;padding:10px 14px;border-radius:6px;font:bold 12px monospace">🎬 watch ad</button><button ontouchstart="declineContinue();event.preventDefault()" style="background:rgba(255,255,255,0.05);color:rgba(255,255,255,0.3);border:none;padding:10px 14px;border-radius:6px;font:bold 12px monospace">restart room</button></div></div>';
+}
+function watchAdToContinue(){
+  document.getElementById('offer').classList.remove('visible');
+  try{window.ReactNativeWebView?.postMessage(JSON.stringify({type:'showRewarded'}))}catch{}
+  // Set up callback — if ad completes, revive player at death position
+  window.onRewardedAdContinue=function(){
+    if(gs){gs.player.dead=false;gs.player.vy=JUMP_FORCE*.3;gs.status="playing";gs.screenShake=0}
+  }
+}
+function declineContinue(){document.getElementById('offer').classList.remove('visible');gs.status="playing"}
 
 // ─── Win ───
 function showWin(){
