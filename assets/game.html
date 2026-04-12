@@ -41,9 +41,9 @@ canvas{display:block;position:absolute;top:0;left:0}
 </div>
 
 <div id="controls" style="display:none">
-<div class="ctrl ctrl-l">
-<div class="btn btn-sq" ontouchstart="inp.left=true" ontouchend="inp.left=false">◀</div>
-<div class="btn btn-sq" ontouchstart="inp.right=true" ontouchend="inp.right=false">▶</div>
+<div class="ctrl ctrl-l" style="gap:20px">
+<div class="btn btn-sq" style="width:62px;height:62px" ontouchstart="inp.left=true" ontouchend="inp.left=false">◀</div>
+<div class="btn btn-sq" style="width:62px;height:62px" ontouchstart="inp.right=true" ontouchend="inp.right=false">▶</div>
 </div>
 <div class="ctrl ctrl-c">
 <div id="boosterBtn" style="display:none"><div class="btn" style="width:44px;height:44px;border-radius:22px;border-color:rgba(241,196,15,0.4);background:rgba(241,196,15,0.08);font-size:18px" ontouchstart="activateBooster()">⚡</div></div>
@@ -90,8 +90,11 @@ const COSMETICS=[{id:"hair_blue",type:"hair",name:"Ocean Light",cost:10,color:"#
 // ─── Canvas ───
 const canvas=document.getElementById('c');const ctx=canvas.getContext('2d');
 let cw=window.innerWidth,ch=window.innerHeight;canvas.width=cw;canvas.height=ch;
-let scale=Math.min(cw/W,(ch-70)/H),ox=(cw-W*scale)/2,oy=((ch-70)-H*scale)/2;
-window.addEventListener('resize',()=>{cw=window.innerWidth;ch=window.innerHeight;canvas.width=cw;canvas.height=ch;scale=Math.min(cw/W,(ch-70)/H);ox=(cw-W*scale)/2;oy=((ch-70)-H*scale)/2});
+let ctrlH=72;
+let scale=Math.min(cw/W,(ch-ctrlH)/H),ox=(cw-W*scale)/2,oy=((ch-ctrlH)-H*scale)/2;
+// Fill edge-to-edge: stretch to fill width, let height adjust
+scale=cw/W;oy=0;ox=0;
+window.addEventListener('resize',()=>{cw=window.innerWidth;ch=window.innerHeight;canvas.width=cw;canvas.height=ch;scale=cw/W;ox=0;oy=0});
 
 // ─── Input ───
 let inp={left:false,right:false,jump:false,jjp:false,dash:false,up:false,down:false};
@@ -109,6 +112,25 @@ function toggleMus(){musicMuted=!musicMuted;localStorage.setItem("drift_music_mu
 // ─── Helpers ───
 function ro(a,b){return a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
 function spikeHB(s){const z=8;switch(s.dir){case"up":return{x:s.x+4,y:s.y-z,w:12,h:z};case"down":return{x:s.x+4,y:s.y,w:12,h:z};case"left":return{x:s.x-z,y:s.y+4,w:z,h:12};case"right":return{x:s.x+TILE,y:s.y+4,w:z,h:12}}}
+// Story fragments — each memory reveals why she's lost in the dream
+const STORY_FRAGMENTS=[
+  "she remembers a field of white flowers...",
+  "...and a dance where everything felt possible",
+  "there was someone with a golden smile",
+  "the world tilted when she wasn't looking",
+  "she carried something heavy that wasn't hers to carry",
+  "the days blurred into grey silence",
+  "a voice said 'I'll stay' — and meant it",
+  "but the truth was a door she had to open",
+  "she walked until there was nowhere left to walk",
+  "then she stopped walking — and started running",
+  "the sky opened up like forgiveness",
+  "some dreams end with waking",
+  "and some with understanding",
+  "she was never lost — she was finding her way back",
+  "the flowers were there all along",
+];
+
 function getHC(){if(gs.equippedHair){const c=COSMETICS.find(c=>c.id===gs.equippedHair);if(c)return c.color}return DEFAULT_HAIR}
 function getTC(){if(gs.equippedTrail){const c=COSMETICS.find(c=>c.id===gs.equippedTrail);if(c)return c.color}return"#e0c0ff"}
 function getDC(){if(gs.equippedDeathEffect){const c=COSMETICS.find(c=>c.id===gs.equippedDeathEffect);if(c)return[c.color,"#fff"]}return[DEFAULT_HAIR,"#fff"]}
@@ -189,7 +211,8 @@ function startGame(){
     particles:[],ambientParticles:mkParticles(0),snow:null,status:"playing",screenShake:0,time:0,
     coins:save.coins,ownedCosmetics:new Set(save.owned),equippedHair:save.eqHair,equippedTrail:save.eqTrail,equippedDeathEffect:save.eqDeath,
     activeBooster:null,shieldActive:false,doubleDashActive:false,checkpoint:null,slowMoFrames:0,springBoostActive:false,
-    starterPackBought:save.starterPack,roomDeaths:0,offerBooster:null,transitionTimer:0,transitionDir:0,roomTitleTimer:90};
+    starterPackBought:save.starterPack,roomDeaths:0,offerBooster:null,transitionTimer:0,transitionDir:0,roomTitleTimer:90,
+    speedrunTime:0,memoriesFound:[],showingMemory:null,memoryTimer:0};
   prevRoom=0;if(loopId){cancelAnimationFrame(loopId);loopId=null}
   document.getElementById('overlay').classList.add('hidden');document.getElementById('overlay').style.display='none';
   document.getElementById('controls').style.display='block';document.getElementById('winOverlay').style.display='none';
@@ -199,7 +222,8 @@ function startGame(){
 // ─── Update (same physics, unchanged) ───
 function update(){
   if(!gs||gs.status!=='playing')return;
-  const sm=gs.slowMoFrames>0?.5:1;gs.time++;const p=gs.player;const room=gs.rooms[gs.currentRoom];
+  const sm=gs.slowMoFrames>0?.5:1;gs.time++;gs.speedrunTime++;const p=gs.player;const room=gs.rooms[gs.currentRoom];
+  if(gs.memoryTimer>0)gs.memoryTimer--;
   // Ambient particles
   for(const s of gs.ambientParticles){
     const t=ROOM_THEMES[gs.currentRoom];
@@ -253,7 +277,10 @@ function update(){
       p.vy=SPRING_FORCE*springM;p.grounded=false;p.canDash=true;p.dashCount=0;p.hairColor=getHC();s.activated=15;sfx("spring");spawnP(s.x+10,s.y,ROOM_THEMES[gs.currentRoom].accent,6,5)}}
   for(const s of room.spikes){if(ro({x:p.x+2,y:p.y+2,w:PW-4,h:PH-4},spikeHB(s))){killPlayer();return}}
   for(const s of room.strawberries){if(s.collected)continue;const dx=(p.x+PW/2)-s.x,dy=(p.y+PH/2)-s.y;
-    if(Math.sqrt(dx*dx+dy*dy)<16){s.collected=true;gs.strawberriesCollected++;gs.coins+=2;sfx("strawberry");sfx("coin");spawnP(s.x,s.y,"#fff",10,5);spawnP(s.x,s.y,ROOM_THEMES[gs.currentRoom].accent,5,3);writeSave()}}
+    if(Math.sqrt(dx*dx+dy*dy)<16){s.collected=true;gs.strawberriesCollected++;gs.coins+=2;sfx("strawberry");sfx("coin");spawnP(s.x,s.y,"#fff",10,5);spawnP(s.x,s.y,ROOM_THEMES[gs.currentRoom].accent,5,3);
+      // Show story fragment
+      const frag=STORY_FRAGMENTS[gs.memoriesFound.length%STORY_FRAGMENTS.length];gs.memoriesFound.push(frag);gs.showingMemory=frag;gs.memoryTimer=180;
+      writeSave()}}
   if(p.y>H+20||p.y<-40||p.x<-20||p.x>W+20){killPlayer();return}
   if(gs.transitionTimer>0){gs.transitionTimer--;if(gs.transitionTimer===10&&gs.transitionDir===1){if(gs.currentRoom<gs.rooms.length-1)enterRoom(gs.currentRoom+1);gs.transitionDir=-1}return}
   if(p.x>=room.exitX&&p.grounded){gs.coins+=1;sfx("coin");
@@ -350,6 +377,15 @@ function render(){
   ctx.fillStyle="rgba(255,255,255,0.3)";ctx.fillText((gs.currentRoom+1)+"/"+gs.rooms.length,W-78,24);
   if(gs.activeBooster){const b=BOOSTERS.find(b=>b.id===gs.activeBooster);if(b){ctx.fillStyle="rgba(0,0,0,0.3)";ctx.fillRect(W/2-45,34,90,18);ctx.fillStyle="rgba(255,200,100,0.6)";ctx.font="bold 10px monospace";ctx.fillText(b.name,W/2-35,48)}}
   if(gs.slowMoFrames>0){ctx.fillStyle=t.accent+"40";ctx.fillRect(0,0,W*(gs.slowMoFrames/300),2)}
+  // Speedrun timer
+  const totalSec=gs.speedrunTime/60;const mins=totalSec/60|0;const secs=totalSec%60|0;const ms=((totalSec%1)*100)|0;
+  ctx.fillStyle="rgba(255,255,255,0.2)";ctx.font="bold 12px monospace";ctx.fillText((mins<10?"0":"")+mins+":"+(secs<10?"0":"")+secs+"."+(ms<10?"0":"")+ms,W/2-30,H-8);
+  // Story fragment display
+  if(gs.showingMemory&&gs.memoryTimer>0){
+    const alpha=gs.memoryTimer>150?((180-gs.memoryTimer)/30):gs.memoryTimer>30?(1):(gs.memoryTimer/30);
+    ctx.globalAlpha=alpha*.8;ctx.fillStyle="rgba(0,0,0,0.5)";ctx.fillRect(W/2-200,H/2+40,400,40);
+    ctx.globalAlpha=alpha;ctx.fillStyle="#fff";ctx.font="italic 13px monospace";ctx.textAlign="center";
+    ctx.fillText(gs.showingMemory,W/2,H/2+65);ctx.textAlign="left";ctx.globalAlpha=1}
   // Transition fade
   if(gs.transitionTimer>0){const prog=gs.transitionDir===1?(20-gs.transitionTimer)/10:gs.transitionTimer/10;ctx.fillStyle=`rgba(10,10,18,${Math.min(1,Math.max(0,prog))})`;ctx.fillRect(-10,-10,W+20,H+20)}
   ctx.restore();
@@ -390,8 +426,23 @@ function acceptOffer(){const b=BOOSTERS.find(b=>b.id===gs.offerBooster);if(b&&gs
 function declineOffer(){gs.offerBooster=null;gs.status="playing";document.getElementById('offer').classList.remove('visible')}
 
 // ─── Win ───
-function showWin(){const w=document.getElementById('winOverlay');w.style.display='flex';
-  w.innerHTML='<div style="text-align:center;font-family:monospace"><div style="font-size:40px;margin-bottom:8px;opacity:0.6">✨</div><h2 style="font-size:28px;color:#c4b5fd;margin-bottom:4px;letter-spacing:6px;text-shadow:0 0 30px rgba(180,160,255,0.5)">AWAKENED</h2><p style="font-size:10px;color:rgba(255,255,255,0.3);font-style:italic;margin-bottom:16px">you drifted through every dream</p><p style="color:rgba(255,100,100,0.6);font-size:12px">✕ '+gs.deaths+' deaths</p><p style="color:rgba(255,255,255,0.4);font-size:12px">◈ '+gs.strawberriesCollected+'/'+gs.totalStrawberries+' memories</p><p style="color:rgba(241,196,15,0.6);font-size:12px;margin-top:4px">🪙 '+gs.coins+'</p><button ontouchstart="startGame()" onclick="startGame()" style="margin-top:16px;background:rgba(180,160,255,0.15);border:1px solid rgba(180,160,255,0.3);color:#c4b5fd;padding:12px 24px;border-radius:20px;font:bold 14px monospace">dream again</button></div>'}
+function showWin(){
+  const totalSec=gs.speedrunTime/60;const mins=totalSec/60|0;const secs=totalSec%60|0;const ms=((totalSec%1)*100)|0;
+  const timeStr=(mins<10?"0":"")+mins+":"+(secs<10?"0":"")+secs+"."+(ms<10?"0":"")+ms;
+  // Save best time
+  let bestTimes=[];try{const bt=localStorage.getItem("drift_best_times");if(bt)bestTimes=JSON.parse(bt)}catch{}
+  bestTimes.push({time:gs.speedrunTime,deaths:gs.deaths,memories:gs.strawberriesCollected,date:new Date().toLocaleDateString()});
+  bestTimes.sort((a,b)=>a.time-b.time);bestTimes=bestTimes.slice(0,5);
+  try{localStorage.setItem("drift_best_times",JSON.stringify(bestTimes))}catch{}
+  const isNewBest=bestTimes[0].time===gs.speedrunTime;
+  // Show all collected story fragments
+  let storyHtml='';if(gs.memoriesFound.length>0){storyHtml='<div style="margin:12px 0;max-height:100px;overflow-y:auto;text-align:left;padding:0 20px">';for(const f of gs.memoriesFound)storyHtml+='<p style="color:rgba(255,255,255,0.4);font-size:10px;font-style:italic;margin:3px 0">'+f+'</p>';storyHtml+='</div>'}
+  // Leaderboard
+  let lbHtml='<div style="margin-top:12px;font-size:10px;color:rgba(255,255,255,0.3)">best times</div>';
+  for(let i=0;i<bestTimes.length;i++){const bt=bestTimes[i];const bSec=bt.time/60;const bM=bSec/60|0;const bS=bSec%60|0;const bMs=((bSec%1)*100)|0;
+    lbHtml+='<div style="color:rgba(255,255,255,'+(i===0?'0.6':'0.25')+');font-size:10px">'+(i+1)+'. '+(bM<10?'0':'')+bM+':'+(bS<10?'0':'')+bS+'.'+(bMs<10?'0':'')+bMs+' — '+bt.deaths+'✕ '+bt.memories+'◈</div>'}
+  const w=document.getElementById('winOverlay');w.style.display='flex';
+  w.innerHTML='<div style="text-align:center;font-family:monospace;max-height:90vh;overflow-y:auto"><div style="font-size:40px;margin-bottom:8px;opacity:0.6">✨</div><h2 style="font-size:28px;color:#c4b5fd;margin-bottom:4px;letter-spacing:6px;text-shadow:0 0 30px rgba(180,160,255,0.5)">AWAKENED</h2><p style="font-size:10px;color:rgba(255,255,255,0.3);font-style:italic;margin-bottom:8px">you drifted through every dream</p>'+(isNewBest?'<p style="color:#f1c40f;font-size:11px">★ NEW BEST TIME ★</p>':'')+'<p style="color:#c4b5fd;font-size:18px;margin:8px 0">'+timeStr+'</p><p style="color:rgba(255,100,100,0.6);font-size:12px">✕ '+gs.deaths+' deaths</p><p style="color:rgba(255,255,255,0.4);font-size:12px">◈ '+gs.strawberriesCollected+'/'+gs.totalStrawberries+' memories</p>'+storyHtml+lbHtml+'<button ontouchstart="startGame()" onclick="startGame()" style="margin-top:16px;background:rgba(180,160,255,0.15);border:1px solid rgba(180,160,255,0.3);color:#c4b5fd;padding:12px 24px;border-radius:20px;font:bold 14px monospace">dream again</button></div>'}
 
 // ─── Booster / Menu ───
 function activateBooster(){if(!gs)return;if(gs.activeBooster==="slowmo"&&gs.slowMoFrames<=0){gs.slowMoFrames=300;gs.activeBooster=null;sfx("buy")}if(gs.activeBooster==="checkpoint"&&!gs.checkpoint){gs.checkpoint={x:gs.player.x,y:gs.player.y};gs.activeBooster=null;sfx("buy")}}
