@@ -319,16 +319,69 @@ default:return new Float32Array(100)}}
 function initSfx(){try{const c=getAC();["jump","walljump","dash","death","strawberry","spring","coin","buy"].forEach(t=>{const s=genSfx(t,c.sampleRate);const b=c.createBuffer(1,s.length,c.sampleRate);b.getChannelData(0).set(s);sfxBufs[t]=b})}catch{}}
 function sfx(t){if(sfxMuted)return;try{const now=performance.now();if(sfxCD[t]&&now-sfxCD[t]<200)return;sfxCD[t]=now;const c=getAC();if(!sfxBufs[t])initSfx();const b=sfxBufs[t];if(!b)return;const s=c.createBufferSource();s.buffer=b;const g=c.createGain();g.gain.value=.5;s.connect(g);g.connect(c.destination);s.onended=()=>{try{s.disconnect();g.disconnect()}catch{}};s.start()}catch{}}
 let bgmSrc=null,bgmGain=null,bgmBuf=null,bgmOn=false;
-function genBGM(){const c=getAC(),sr=c.sampleRate,bpm=110,bd=60/bpm,brd=bd*4,ld=brd*4,len=sr*ld|0;const buf=c.createBuffer(1,len,sr),d=buf.getChannelData(0);
-const chords=[{r:110,n:[220,277,330]},{r:87,n:[175,220,262]},{r:98,n:[196,247,294]},{r:82,n:[165,208,247]}];
-const mels=[[440,523,659,523,440,659,523,440],[349,440,523,440,349,523,440,349],[392,494,587,494,392,587,494,392],[330,392,494,392,330,494,392,330]];
-const sq=(t,f)=>Math.sin(2*Math.PI*f*t)>0?1:-1;const tri=(t,f)=>{const p=(t*f)%1;return 4*Math.abs(p-.5)-1};const sn=(t,f)=>Math.sin(2*Math.PI*f*t);
-for(let i=0;i<len;i++){const t=i/sr,bi=t/brd%4|0,bt=t-bi*brd,ch=chords[bi],ml=mels[bi],ei=bt/(bd/2)%8|0,ne=1-bt%(bd/2)/(bd/2-.03);
-let s=tri(t,ch.r)*.06+sn(t,ch.n[ei%ch.n.length])*ne*.03+sn(t,ml[ei])*ne*.04;
-const bb=bt/bd|0;if(bb%2===0){const kt=bt-bb*bd;if(kt<.06)s+=sn(kt,100-(100-30)*kt/.06)*(1-kt/.06)*.06}
-d[i]=Math.max(-.8,Math.min(.8,s))}return buf}
-function startBGM(){if(bgmOn||musicMuted)return;try{const c=getAC();if(!bgmBuf)bgmBuf=genBGM();bgmSrc=c.createBufferSource();bgmSrc.buffer=bgmBuf;bgmSrc.loop=true;bgmGain=c.createGain();bgmGain.gain.value=.4;bgmSrc.connect(bgmGain);bgmGain.connect(c.destination);bgmSrc.start();bgmOn=true}catch{}}
-function stopBGM(){bgmOn=false;try{bgmSrc?.stop();bgmSrc?.disconnect();bgmGain?.disconnect()}catch{};bgmSrc=null;bgmGain=null}
+// Per-room BGM — each room has its own key, scale, and tempo
+const ROOM_MUSIC=[
+  // 1 Innocence: C major, gentle
+  {bpm:100,chords:[{r:65,n:[262,330,392]},{r:55,n:[220,277,330]},{r:58,n:[233,294,349]},{r:52,n:[196,262,330]}],
+   mels:[[523,659,784,659,523,784,659,523],[440,523,659,523,440,659,523,440],[466,587,698,587,466,698,587,466],[392,523,659,523,392,659,523,392]]},
+  // 2 Wonder: G major, bright
+  {bpm:115,chords:[{r:98,n:[392,494,587]},{r:82,n:[330,415,494]},{r:87,n:[349,440,523]},{r:73,n:[294,370,440]}],
+   mels:[[784,988,1175,988,784,1175,988,784],[659,784,988,784,659,988,784,659],[698,880,1047,880,698,1047,880,698],[587,740,880,740,587,880,740,587]]},
+  // 3 Unease: Dm, tension
+  {bpm:105,chords:[{r:73,n:[294,349,440]},{r:65,n:[262,330,392]},{r:58,n:[233,277,349]},{r:69,n:[277,349,415]}],
+   mels:[[587,698,880,698,587,880,698,587],[523,659,784,659,523,784,659,523],[466,554,698,554,466,698,554,466],[554,698,830,698,554,830,698,554]]},
+  // 4 Betrayal: Am, aggressive
+  {bpm:120,chords:[{r:55,n:[220,262,330]},{r:52,n:[208,262,311]},{r:58,n:[233,277,349]},{r:49,n:[196,247,294]}],
+   mels:[[440,523,659,523,440,659,523,440],[415,523,622,523,415,622,523,415],[466,554,698,554,466,698,554,466],[392,494,587,494,392,587,494,392]]},
+  // 5 Solitude: Em, slow sparse
+  {bpm:90,chords:[{r:82,n:[330,392,494]},{r:73,n:[294,349,440]},{r:65,n:[262,330,392]},{r:61,n:[247,311,370]}],
+   mels:[[659,784,988,784,659,988,784,659],[587,698,880,698,587,880,698,587],[523,659,784,659,523,784,659,523],[494,622,740,622,494,740,622,494]]},
+  // 6 Resilience: F major, determined
+  {bpm:110,chords:[{r:87,n:[349,440,523]},{r:65,n:[262,330,392]},{r:73,n:[294,349,440]},{r:82,n:[330,415,494]}],
+   mels:[[698,880,1047,880,698,1047,880,698],[523,659,784,659,523,784,659,523],[587,698,880,698,587,880,698,587],[659,830,988,830,659,988,830,659]]},
+  // 7 Love: Eb major, tender
+  {bpm:100,chords:[{r:78,n:[311,392,466]},{r:69,n:[277,349,415]},{r:65,n:[262,311,392]},{r:73,n:[294,370,440]}],
+   mels:[[622,784,932,784,622,932,784,622],[554,698,830,698,554,830,698,554],[523,622,784,622,523,784,622,523],[587,740,880,740,587,880,740,587]]},
+  // 8 Confession: Cm, somber
+  {bpm:95,chords:[{r:65,n:[262,311,392]},{r:58,n:[233,277,349]},{r:52,n:[208,262,311]},{r:61,n:[247,294,370]}],
+   mels:[[523,622,784,622,523,784,622,523],[466,554,698,554,466,698,554,466],[415,523,622,523,415,622,523,415],[494,587,740,587,494,740,587,494]]},
+  // 9 Despair: Bbm, very slow dark
+  {bpm:85,chords:[{r:58,n:[233,277,349]},{r:52,n:[208,247,311]},{r:49,n:[196,233,294]},{r:55,n:[220,262,330]}],
+   mels:[[466,554,698,554,466,698,554,466],[415,494,622,494,415,622,494,415],[392,466,587,466,392,587,466,392],[440,523,659,523,440,659,523,440]]},
+  // 10 Defiance: Dm, fast intense
+  {bpm:130,chords:[{r:73,n:[294,349,440]},{r:69,n:[277,330,415]},{r:65,n:[262,311,392]},{r:82,n:[330,392,494]}],
+   mels:[[587,698,880,698,587,880,698,587],[554,659,830,659,554,830,659,554],[523,622,784,622,523,784,622,523],[659,784,988,784,659,988,784,659]]},
+  // 11 Release: Ab major, peaceful
+  {bpm:95,chords:[{r:52,n:[208,262,311]},{r:58,n:[233,294,349]},{r:49,n:[196,247,294]},{r:55,n:[220,277,330]}],
+   mels:[[415,523,622,523,415,622,523,415],[466,587,698,587,466,698,587,466],[392,494,587,494,392,587,494,392],[440,554,659,554,440,659,554,440]]},
+  // 12 Awakening: C major, building bright
+  {bpm:105,chords:[{r:65,n:[262,330,392]},{r:73,n:[294,370,440]},{r:82,n:[330,415,494]},{r:87,n:[349,440,523]}],
+   mels:[[523,659,784,659,523,784,659,523],[587,740,880,740,587,880,740,587],[659,830,988,830,659,988,830,659],[698,880,1047,880,698,1047,880,698]]},
+];
+
+function genBGM(roomIdx){
+  const c=getAC(),sr=c.sampleRate;
+  const m=ROOM_MUSIC[roomIdx%ROOM_MUSIC.length];
+  const bd=60/m.bpm,brd=bd*4,ld=brd*4,len=sr*ld|0;
+  const buf=c.createBuffer(1,len,sr),d=buf.getChannelData(0);
+  const sq=(t,f)=>Math.sin(2*Math.PI*f*t)>0?1:-1;const tri=(t,f)=>{const p=(t*f)%1;return 4*Math.abs(p-.5)-1};const sn=(t,f)=>Math.sin(2*Math.PI*f*t);
+  for(let i=0;i<len;i++){const t=i/sr,bi=t/brd%4|0,bt=t-bi*brd,ch=m.chords[bi],ml=m.mels[bi],ei=bt/(bd/2)%8|0,ne=1-bt%(bd/2)/(bd/2-.03);
+  let s=tri(t,ch.r)*.06+sn(t,ch.n[ei%ch.n.length])*ne*.03+sn(t,ml[ei])*ne*.04;
+  const bb=bt/bd|0;if(bb%2===0){const kt=bt-bb*bd;if(kt<.06)s+=sn(kt,100-(100-30)*kt/.06)*(1-kt/.06)*.06}
+  d[i]=Math.max(-.8,Math.min(.8,s))}return buf}
+
+let bgmRoomIdx=-1;
+function startBGM(roomIdx){
+  const ri=roomIdx!==undefined?roomIdx:(dailyMode?(gs?.dailyThemeIdx||0):(gs?.currentRoom||0));
+  if(bgmOn&&bgmRoomIdx===ri)return; // same room, already playing
+  stopBGM();
+  if(musicMuted)return;
+  try{const c=getAC();
+  bgmBuf=genBGM(ri);bgmRoomIdx=ri;
+  bgmSrc=c.createBufferSource();bgmSrc.buffer=bgmBuf;bgmSrc.loop=true;
+  bgmGain=c.createGain();bgmGain.gain.value=.4;
+  bgmSrc.connect(bgmGain);bgmGain.connect(c.destination);bgmSrc.start();bgmOn=true}catch{}}
+function stopBGM(){bgmOn=false;bgmRoomIdx=-1;try{bgmSrc?.stop();bgmSrc?.disconnect();bgmGain?.disconnect()}catch{};bgmSrc=null;bgmGain=null;bgmBuf=null}
 
 // ─── Game State ───
 let gs=null;let prevRoom=0;
@@ -341,7 +394,7 @@ function killPlayer(){
     if(gs.coins>=3)gs.offerBooster="slowmo";if(gs.coins>=5&&gs.roomDeaths>=6)gs.offerBooster="checkpoint";if(gs.coins>=8&&gs.roomDeaths>=9)gs.offerBooster="shield";p.deadTimer=25}
 }
 function respawnPlayer(){const room=gs.rooms[gs.currentRoom];const sp=gs.checkpoint||room.spawn;gs.player=mkPlayer(sp,getHC());if(gs.checkpoint){gs.checkpoint=null;gs.activeBooster=null}for(const c of room.crumbles){c.timer=0;c.respawnTimer=0;c.visible=true}for(const s of room.springs)s.activated=0}
-function enterRoom(idx){gs.currentRoom=idx;gs.player=mkPlayer(gs.rooms[idx].spawn,getHC());gs.checkpoint=null;gs.doubleDashActive=false;gs.springBoostActive=false;gs.slowMoFrames=0;gs.roomDeaths=0;gs.offerBooster=null;gs.ambientParticles=mkParticles(idx);gs.roomTitleTimer=90;showRoomTitle(idx)}
+function enterRoom(idx){gs.currentRoom=idx;gs.player=mkPlayer(gs.rooms[idx].spawn,getHC());gs.checkpoint=null;gs.doubleDashActive=false;gs.springBoostActive=false;gs.slowMoFrames=0;gs.roomDeaths=0;gs.offerBooster=null;gs.ambientParticles=mkParticles(idx);gs.roomTitleTimer=90;showRoomTitle(idx);startBGM(idx)}
 function showRoomTitle(idx){const t=ROOM_THEMES[idx];if(!t)return;const el=document.getElementById('roomTitle');el.style.display='flex';el.innerHTML='<div style="text-align:center;opacity:0;animation:fadeTitle 2s ease forwards"><div style="font-size:28px;color:'+t.accent+';letter-spacing:6px;text-shadow:0 0 30px '+t.accent+'">'+t.name+'</div></div>';if(!document.getElementById('titleAnim')){const style=document.createElement('style');style.id='titleAnim';style.textContent='@keyframes fadeTitle{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}';document.head.appendChild(style)}setTimeout(()=>{el.style.display='none'},2000)}
 
 // ─── Dream Layers (B-sides) ───
