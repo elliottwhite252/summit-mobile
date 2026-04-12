@@ -34,9 +34,9 @@ canvas{display:block;position:absolute;top:0;left:0}
 <div style="font-size:40px;margin-bottom:12px;opacity:0.6">💭</div>
 <h1>DRIFT</h1>
 <div class="sub">some dreams you have to fall through to wake up</div>
-<button class="start-btn" ontouchend="startGame()" onclick="startGame()">enter the dream</button>
+<button class="start-btn" id="startBtn">enter the dream</button>
 <div id="layerBtns" style="margin-top:10px;display:flex;gap:6px;justify-content:center"></div>
-<button class="start-btn" style="margin-top:8px;background:rgba(241,196,15,0.1);border-color:rgba(241,196,15,0.3);color:#f1c40f;font-size:12px;padding:10px 20px" ontouchend="startDailyDream()" onclick="startDailyDream()">☀ daily dream</button>
+<button class="start-btn" id="dailyBtn" style="margin-top:8px;background:rgba(241,196,15,0.1);border-color:rgba(241,196,15,0.3);color:#f1c40f;font-size:12px;padding:10px 20px">☀ daily dream</button>
 <div id="streakDisplay" style="margin-top:12px;font-size:10px;color:rgba(255,255,255,0.25)"></div>
 </div>
 </div>
@@ -797,4 +797,8 @@ function loop(){if(!gs){loopId=null;return}update();render();updateBoosterBtn();
 document.addEventListener('touchstart',function initA(){initSfx();document.removeEventListener('touchstart',initA)},{once:true});
 document.getElementById('sfxBtn').textContent=sfxMuted?'🔇':'🔊';
 document.getElementById('musBtn').textContent=musicMuted?'🔇':'🎵';
+
+// Button listeners (more reliable than inline handlers in WebView)
+document.getElementById('startBtn').addEventListener('pointerup',function(e){e.preventDefault();startGame()});
+document.getElementById('dailyBtn').addEventListener('pointerup',function(e){e.preventDefault();startDailyDream()});
 </script></body></html>
