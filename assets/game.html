@@ -35,7 +35,8 @@ canvas{display:block;position:absolute;top:0;left:0}
 <h1>DRIFT</h1>
 <div class="sub">some dreams you have to fall through to wake up</div>
 <button class="start-btn" ontouchstart="startGame();event.preventDefault()">enter the dream</button>
-<button class="start-btn" style="margin-top:10px;background:rgba(241,196,15,0.1);border-color:rgba(241,196,15,0.3);color:#f1c40f;font-size:12px;padding:10px 20px" ontouchstart="startDailyDream();event.preventDefault()">☀ daily dream</button>
+<div id="layerBtns" style="margin-top:10px;display:flex;gap:6px;justify-content:center"></div>
+<button class="start-btn" style="margin-top:8px;background:rgba(241,196,15,0.1);border-color:rgba(241,196,15,0.3);color:#f1c40f;font-size:12px;padding:10px 20px" ontouchstart="startDailyDream();event.preventDefault()">☀ daily dream</button>
 <div id="streakDisplay" style="margin-top:12px;font-size:10px;color:rgba(255,255,255,0.25)"></div>
 </div>
 </div>
@@ -214,6 +215,55 @@ function showStreakDisplay(){
   else{el.textContent='play daily to build a streak'}
 }
 showStreakDisplay();
+function renderLayerBtns(){
+  const maxL=getDreamLayer();const el=document.getElementById('layerBtns');if(!el)return;
+  let h='';const names=["Dream","Nightmare","Abyss"];const colors=["rgba(180,160,255,","rgba(255,160,100,","rgba(255,80,80,"];
+  for(let l=1;l<=3;l++){const unlocked=l<=maxL;const sel=l===currentLayer;
+    h+='<button ontouchstart="if('+unlocked+'){currentLayer='+l+';renderLayerBtns()};event.preventDefault()" style="padding:6px 14px;border-radius:12px;font:bold 10px monospace;border:1px solid '+colors[l-1]+(sel?'0.6':'0.2')+');background:'+colors[l-1]+(sel?'0.15':'0.04')+');color:'+(unlocked?colors[l-1]+'0.8)':'rgba(255,255,255,0.15)')+'">'+(unlocked?names[l-1]:'🔒')+'</button>'}
+  el.innerHTML=h}
+renderLayerBtns();
+
+// ─── Achievements ───
+const ACHIEVEMENTS=[
+  {id:"first_step",name:"First Steps",desc:"Complete room 1",icon:"👣",coins:5},
+  {id:"awakened",name:"Awakened",desc:"Beat all 12 rooms",icon:"✨",coins:20},
+  {id:"speed_demon",name:"Speed Demon",desc:"Beat the game in under 3 minutes",icon:"⚡",coins:30},
+  {id:"collector",name:"Collector",desc:"Find 10 memories",icon:"◈",coins:15},
+  {id:"all_memories",name:"Full Story",desc:"Find all memories",icon:"📖",coins:50},
+  {id:"persistent",name:"Persistent",desc:"Die 50 times total",icon:"💀",coins:10},
+  {id:"endurance",name:"Endurance",desc:"Die 100 times total",icon:"🦴",coins:20},
+  {id:"daily_first",name:"Daily Dreamer",desc:"Complete a daily dream",icon:"☀",coins:10},
+  {id:"streak_7",name:"Dream Walker",desc:"7 day streak",icon:"🔥",coins:30},
+  {id:"shopper",name:"Shopper",desc:"Buy your first cosmetic",icon:"🎨",coins:5},
+];
+
+function loadAchievements(){try{return new Set(JSON.parse(localStorage.getItem("drift_achievements")||"[]"))}catch{return new Set()}}
+function saveAchievements(set){try{localStorage.setItem("drift_achievements",JSON.stringify([...set]))}catch{}}
+let unlockedAch=loadAchievements();
+let achNotification=null;let achNotifyTimer=0;
+
+function checkAchievements(){
+  if(!gs)return;
+  const checks=[
+    {id:"first_step",test:()=>gs.currentRoom>=1||gs.status==="win"},
+    {id:"awakened",test:()=>gs.status==="win"&&!dailyMode},
+    {id:"speed_demon",test:()=>gs.status==="win"&&!dailyMode&&gs.speedrunTime<180000},
+    {id:"collector",test:()=>gs.strawberriesCollected>=10},
+    {id:"all_memories",test:()=>gs.memoriesFound.length>=STORY_FRAGMENTS.length},
+    {id:"persistent",test:()=>gs.deaths>=50},
+    {id:"endurance",test:()=>gs.deaths>=100},
+    {id:"daily_first",test:()=>dailyMode&&gs.status==="win"},
+    {id:"streak_7",test:()=>(getStreak().count||0)>=7},
+    {id:"shopper",test:()=>gs.ownedCosmetics.size>0},
+  ];
+  for(const c of checks){
+    if(!unlockedAch.has(c.id)&&c.test()){
+      unlockedAch.add(c.id);saveAchievements(unlockedAch);
+      const a=ACHIEVEMENTS.find(a=>a.id===c.id);
+      if(a){gs.coins+=a.coins;writeSave();achNotification=a;achNotifyTimer=180;sfx("strawberry")}
+    }
+  }
+}
 
 function curThemeIdx(){return dailyMode?(gs?.dailyThemeIdx||0):gs?.currentRoom||0}
 function curTheme(){return ROOM_THEMES[curThemeIdx()]||ROOM_THEMES[0]}
@@ -294,8 +344,33 @@ function respawnPlayer(){const room=gs.rooms[gs.currentRoom];const sp=gs.checkpo
 function enterRoom(idx){gs.currentRoom=idx;gs.player=mkPlayer(gs.rooms[idx].spawn,getHC());gs.checkpoint=null;gs.doubleDashActive=false;gs.springBoostActive=false;gs.slowMoFrames=0;gs.roomDeaths=0;gs.offerBooster=null;gs.ambientParticles=mkParticles(idx);gs.roomTitleTimer=90;showRoomTitle(idx)}
 function showRoomTitle(idx){const t=ROOM_THEMES[idx];if(!t)return;const el=document.getElementById('roomTitle');el.style.display='flex';el.innerHTML='<div style="text-align:center;opacity:0;animation:fadeTitle 2s ease forwards"><div style="font-size:28px;color:'+t.accent+';letter-spacing:6px;text-shadow:0 0 30px '+t.accent+'">'+t.name+'</div></div>';if(!document.getElementById('titleAnim')){const style=document.createElement('style');style.id='titleAnim';style.textContent='@keyframes fadeTitle{0%{opacity:0}20%{opacity:1}80%{opacity:1}100%{opacity:0}}';document.head.appendChild(style)}setTimeout(()=>{el.style.display='none'},2000)}
 
+// ─── Dream Layers (B-sides) ───
+function getDreamLayer(){try{return parseInt(localStorage.getItem("drift_max_layer")||"1")}catch{return 1}}
+function setDreamLayer(l){try{localStorage.setItem("drift_max_layer",String(l))}catch{}}
+let currentLayer=1;
+
+function applyLayer(rooms,layer){
+  if(layer<=1)return rooms;
+  return rooms.map(r=>{
+    const nr={...r,platforms:r.platforms.map(p=>({...p})),spikes:[...r.spikes],strawberries:r.strawberries.map(s=>({...s})),springs:r.springs.map(s=>({...s})),crumbles:r.crumbles.map(c=>({...c}))};
+    // Layer 2: shrink platforms by 20%, add extra spikes
+    // Layer 3: shrink by 40%, more spikes, faster crumbles
+    const shrink=layer===2?0.8:0.6;
+    nr.platforms=nr.platforms.map(p=>{
+      if(p.w>T*2&&p.h===T){return{...p,w:Math.max(T*2,Math.floor(p.w*shrink))}}return p});
+    // Add extra spikes in gaps
+    const extraSpikes=layer===2?5:12;
+    for(let i=0;i<extraSpikes;i++){
+      const sx=60+Math.floor(Math.random()*(W-120));
+      if(!nr.spikes.find(s=>Math.abs(s.x-sx)<20)){nr.spikes.push({x:sx,y:H-T,dir:"up"})}}
+    // Faster crumbles in layer 3
+    if(layer===3){nr.crumbles=nr.crumbles.map(c=>({...c,timer:0,respawnTimer:0,visible:true}))}
+    return nr;
+  });
+}
+
 function startGame(){
-  const save=loadSave();const rooms=createRooms();let total=0;for(const r of rooms)total+=r.strawberries.length;
+  const save=loadSave();const rawRooms=createRooms();const rooms=applyLayer(rawRooms,currentLayer);let total=0;for(const r of rooms)total+=r.strawberries.length;
   const hc=save.eqHair?(COSMETICS.find(c=>c.id===save.eqHair)?.color||DEFAULT_HAIR):DEFAULT_HAIR;
   gs={player:mkPlayer(rooms[0].spawn,hc),rooms,currentRoom:0,deaths:0,strawberriesCollected:0,totalStrawberries:total,
     particles:[],ambientParticles:mkParticles(0),snow:null,status:"playing",screenShake:0,time:0,
@@ -380,6 +455,9 @@ function update(){
     else{gs.coins+=5;gs.status="win";stopBGM();showWin();writeSave();return}writeSave();return}
   const hx=p.x+PW/2,hy=p.y-1;for(let i=0;i<p.hair.length;i++){const tgt=i===0?{x:hx,y:hy}:p.hair[i-1];p.hair[i].x+=(tgt.x-p.hair[i].x)*.4;p.hair[i].y+=(tgt.y-p.hair[i].y)*.4;p.hair[i].x-=p.facing*(i*1.2);p.hair[i].y+=i*.5}
   gs.particles=gs.particles.filter(pt=>{pt.x+=pt.vx;pt.y+=pt.vy;pt.vy+=.08;pt.life-=.03;return pt.life>0});
+  // Check achievements
+  if(gs.time%30===0)checkAchievements();
+  if(achNotifyTimer>0)achNotifyTimer--;
 }
 // ─── Render (dream-themed) ───
 function render(){
@@ -484,6 +562,17 @@ function render(){
     ctx.globalAlpha=alpha*.8;ctx.fillStyle="rgba(0,0,0,0.5)";ctx.fillRect(W/2-200,H/2+40,400,40);
     ctx.globalAlpha=alpha;ctx.fillStyle="#fff";ctx.font="italic 13px monospace";ctx.textAlign="center";
     ctx.fillText(gs.showingMemory,W/2,H/2+65);ctx.textAlign="left";ctx.globalAlpha=1}
+  // Achievement notification
+  if(achNotification&&achNotifyTimer>0){
+    const alpha=achNotifyTimer>150?((180-achNotifyTimer)/30):achNotifyTimer>30?1:achNotifyTimer/30;
+    ctx.globalAlpha=alpha;ctx.fillStyle="rgba(10,10,18,0.85)";ctx.fillRect(W/2-120,20,240,50);
+    ctx.strokeStyle="rgba(241,196,15,0.4)";ctx.lineWidth=1;ctx.strokeRect(W/2-120,20,240,50);
+    ctx.fillStyle="#f1c40f";ctx.font="bold 12px monospace";ctx.textAlign="center";
+    ctx.fillText(achNotification.icon+" "+achNotification.name,W/2,42);
+    ctx.fillStyle="rgba(255,255,255,0.4)";ctx.font="10px monospace";
+    ctx.fillText("+"+achNotification.coins+" coins",W/2,58);
+    ctx.textAlign="left";ctx.globalAlpha=1;
+    if(achNotifyTimer<=0)achNotification=null}
   // Transition fade
   if(gs.transitionTimer>0){const prog=gs.transitionDir===1?(20-gs.transitionTimer)/10:gs.transitionTimer/10;ctx.fillStyle=`rgba(10,10,18,${Math.min(1,Math.max(0,prog))})`;ctx.fillRect(-10,-10,W+20,H+20)}
   ctx.restore();
@@ -500,6 +589,13 @@ function renderShop(){
     h+='<div style="display:flex;align-items:center"><div style="flex:1;font-size:10px;color:rgba(255,255,255,0.5)"><div>✦ Aurora Light (Exclusive)</div><div>✦ Aurora Trail (Exclusive)</div><div style="color:#f1c40f;margin-top:2px">+ 100 🪙</div></div>';
     h+='<button ontouchstart="buyStarterPack();event.preventDefault()" style="background:#7c3aed;color:#fff;border:none;padding:8px 14px;border-radius:8px;font:bold 13px monospace">$0.99</button></div></div>'}
   h+='<button ontouchstart="watchAd();event.preventDefault()" style="background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.2);color:#10b981;padding:8px;border-radius:6px;width:100%;font:bold 12px monospace;margin-bottom:10px">🎬 Watch Ad for 5 🪙</button>';
+  // Coin packs
+  h+='<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:6px">COIN PACKS</div>';
+  h+='<div style="display:flex;gap:6px;margin-bottom:10px">';
+  h+='<button ontouchstart="buyCoinPack(50);event.preventDefault()" style="flex:1;background:rgba(241,196,15,0.08);border:1px solid rgba(241,196,15,0.2);border-radius:6px;padding:8px;text-align:center;color:#f1c40f;font:bold 11px monospace"><div>50 🪙</div><div style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px">$0.99</div></button>';
+  h+='<button ontouchstart="buyCoinPack(200);event.preventDefault()" style="flex:1;background:rgba(241,196,15,0.08);border:1px solid rgba(241,196,15,0.2);border-radius:6px;padding:8px;text-align:center;color:#f1c40f;font:bold 11px monospace"><div>200 🪙</div><div style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px">$2.99</div></button>';
+  h+='<button ontouchstart="buyCoinPack(500);event.preventDefault()" style="flex:1;background:rgba(241,196,15,0.1);border:1px solid rgba(241,196,15,0.3);border-radius:6px;padding:8px;text-align:center;color:#f1c40f;font:bold 11px monospace"><div>500 🪙</div><div style="font-size:9px;color:rgba(255,255,255,0.3);margin-top:2px">$4.99</div></button>';
+  h+='</div>';
   h+='<div style="font-size:10px;color:rgba(255,255,255,0.3);margin-bottom:6px">BOOSTERS</div>';
   for(const b of BOOSTERS){const active=gs.activeBooster===b.id;const afford=gs.coins>=b.cost;
     h+='<div style="background:rgba(255,255,255,0.04);border-radius:8px;padding:8px;margin-bottom:4px;display:flex;align-items:center"><span style="font-size:18px;margin-right:8px">'+b.icon+'</span><div style="flex:1"><div style="color:rgba(255,255,255,0.8);font-size:11px;font-weight:bold">'+b.name+'</div><div style="color:rgba(255,255,255,0.3);font-size:9px">'+b.desc+'</div></div><button ontouchstart="buyBooster(\''+b.id+'\');event.preventDefault()" style="background:'+(active?'rgba(100,200,100,0.2)':afford?'rgba(241,196,15,0.15)':'rgba(255,255,255,0.05)')+';color:'+(active?'#6ddb6d':afford?'#f1c40f':'#444')+';border:1px solid '+(active?'rgba(100,200,100,0.3)':afford?'rgba(241,196,15,0.2)':'rgba(255,255,255,0.05)')+';padding:4px 8px;border-radius:4px;font:bold 10px monospace">'+(active?'ACTIVE':'🪙 '+b.cost)+'</button></div>'}
@@ -530,6 +626,10 @@ function openJournal(){if(!gs)return;gs.status="shop";stopBGM();
   }
   s.innerHTML=h;
 }
+
+function buyCoinPack(amount){if(!gs)return;
+  // In production this triggers Apple IAP — for now simulate purchase
+  gs.coins+=amount;sfx("strawberry");sfx("coin");writeSave();renderShop()}
 
 function watchAd(){try{window.ReactNativeWebView?.postMessage(JSON.stringify({type:'showRewarded'}))}catch{}}
 window.onRewardedAdComplete=function(){
@@ -573,7 +673,7 @@ function showWin(){
     try{localStorage.setItem("drift_daily_bests",JSON.stringify(dailyBests))}catch{}
     const w=document.getElementById('winOverlay');w.style.display='flex';
     w.innerHTML='<div style="text-align:center;font-family:monospace"><div style="font-size:36px;margin-bottom:8px">☀</div><h2 style="font-size:24px;color:#f1c40f;margin-bottom:8px;letter-spacing:4px">DAILY DREAM COMPLETE</h2><p style="color:#c4b5fd;font-size:20px;margin:8px 0">'+timeStr+'</p><p style="color:rgba(255,255,255,0.4);font-size:12px">✕ '+gs.deaths+' deaths</p><p style="color:#f1c40f;font-size:12px;margin-top:8px">+10 🪙'+(bonus>0?' + '+bonus+' streak bonus':'')+'</p><p style="color:rgba(255,255,255,0.25);font-size:10px;margin-top:4px">🔥 '+streak.count+' day streak</p><button ontouchstart="dailyMode=false;backToMenu();event.preventDefault()" style="margin-top:16px;background:rgba(180,160,255,0.15);border:1px solid rgba(180,160,255,0.3);color:#c4b5fd;padding:10px 20px;border-radius:20px;font:bold 13px monospace">back to menu</button></div>';
-    stopBGM();return;
+    stopBGM();showStreakDisplay();return;
   }
   const totalSec=gs.speedrunTime/1000;const mins=totalSec/60|0;const secs=totalSec%60|0;const ms=((totalSec%1)*100)|0;
   const timeStr=(mins<10?"0":"")+mins+":"+(secs<10?"0":"")+secs+"."+(ms<10?"0":"")+ms;
@@ -583,6 +683,8 @@ function showWin(){
   bestTimes.sort((a,b)=>a.time-b.time);bestTimes=bestTimes.slice(0,5);
   try{localStorage.setItem("drift_best_times",JSON.stringify(bestTimes))}catch{}
   const isNewBest=bestTimes[0].time===gs.speedrunTime;
+  // Unlock next dream layer
+  if(!dailyMode&&currentLayer<3){const maxL=getDreamLayer();if(currentLayer>=maxL){setDreamLayer(currentLayer+1)}}
   // Show all collected story fragments
   let storyHtml='';if(gs.memoriesFound.length>0){storyHtml='<div style="margin:12px 0;max-height:100px;overflow-y:auto;text-align:left;padding:0 20px">';for(const f of gs.memoriesFound)storyHtml+='<p style="color:rgba(255,255,255,0.4);font-size:10px;font-style:italic;margin:3px 0">'+f+'</p>';storyHtml+='</div>'}
   // Leaderboard
@@ -590,7 +692,45 @@ function showWin(){
   for(let i=0;i<bestTimes.length;i++){const bt=bestTimes[i];const bSec=bt.time/1000;const bM=bSec/60|0;const bS=bSec%60|0;const bMs=((bSec%1)*100)|0;
     lbHtml+='<div style="color:rgba(255,255,255,'+(i===0?'0.6':'0.25')+');font-size:10px">'+(i+1)+'. '+(bM<10?'0':'')+bM+':'+(bS<10?'0':'')+bS+'.'+(bMs<10?'0':'')+bMs+' — '+bt.deaths+'✕ '+bt.memories+'◈</div>'}
   const w=document.getElementById('winOverlay');w.style.display='flex';
-  w.innerHTML='<div style="text-align:center;font-family:monospace;max-height:90vh;overflow-y:auto"><div style="font-size:40px;margin-bottom:8px;opacity:0.6">✨</div><h2 style="font-size:28px;color:#c4b5fd;margin-bottom:4px;letter-spacing:6px;text-shadow:0 0 30px rgba(180,160,255,0.5)">AWAKENED</h2><p style="font-size:10px;color:rgba(255,255,255,0.3);font-style:italic;margin-bottom:8px">you drifted through every dream</p>'+(isNewBest?'<p style="color:#f1c40f;font-size:11px">★ NEW BEST TIME ★</p>':'')+'<p style="color:#c4b5fd;font-size:18px;margin:8px 0">'+timeStr+'</p><p style="color:rgba(255,100,100,0.6);font-size:12px">✕ '+gs.deaths+' deaths</p><p style="color:rgba(255,255,255,0.4);font-size:12px">◈ '+gs.strawberriesCollected+'/'+gs.totalStrawberries+' memories</p>'+storyHtml+lbHtml+'<button ontouchstart="startGame();event.preventDefault()" style="margin-top:16px;background:rgba(180,160,255,0.15);border:1px solid rgba(180,160,255,0.3);color:#c4b5fd;padding:12px 24px;border-radius:20px;font:bold 14px monospace">dream again</button></div>'}
+  w.innerHTML='<div style="text-align:center;font-family:monospace;max-height:90vh;overflow-y:auto"><div style="font-size:40px;margin-bottom:8px;opacity:0.6">✨</div><h2 style="font-size:28px;color:#c4b5fd;margin-bottom:4px;letter-spacing:6px;text-shadow:0 0 30px rgba(180,160,255,0.5)">AWAKENED</h2><p style="font-size:10px;color:rgba(255,255,255,0.3);font-style:italic;margin-bottom:8px">you drifted through every dream</p>'+(isNewBest?'<p style="color:#f1c40f;font-size:11px">★ NEW BEST TIME ★</p>':'')+'<p style="color:#c4b5fd;font-size:18px;margin:8px 0">'+timeStr+'</p><p style="color:rgba(255,100,100,0.6);font-size:12px">✕ '+gs.deaths+' deaths</p><p style="color:rgba(255,255,255,0.4);font-size:12px">◈ '+gs.strawberriesCollected+'/'+gs.totalStrawberries+' memories</p>'+storyHtml+lbHtml+'<button ontouchstart="startGame();event.preventDefault()" style="margin-top:16px;background:rgba(180,160,255,0.15);border:1px solid rgba(180,160,255,0.3);color:#c4b5fd;padding:12px 24px;border-radius:20px;font:bold 14px monospace">dream again</button><button ontouchstart="shareCard();event.preventDefault()" style="margin-top:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);color:rgba(255,255,255,0.4);padding:8px 20px;border-radius:20px;font:bold 11px monospace;display:block;margin-left:auto;margin-right:auto">📤 share</button></div>'}
+
+// ─── Share Card ───
+function shareCard(){
+  if(!gs)return;
+  const totalSec=gs.speedrunTime/1000;const mins=totalSec/60|0;const secs=totalSec%60|0;const ms=((totalSec%1)*100)|0;
+  const timeStr=(mins<10?"0":"")+mins+":"+(secs<10?"0":"")+secs+"."+(ms<10?"0":"")+ms;
+  // Draw card to offscreen canvas
+  const c=document.createElement('canvas');c.width=600;c.height=400;const cx=c.getContext('2d');
+  // BG
+  const g=cx.createLinearGradient(0,0,0,400);g.addColorStop(0,'#1a0f2e');g.addColorStop(1,'#0a0a18');
+  cx.fillStyle=g;cx.fillRect(0,0,600,400);
+  // Border glow
+  cx.strokeStyle='rgba(180,160,255,0.3)';cx.lineWidth=2;cx.strokeRect(10,10,580,380);
+  // Title
+  cx.fillStyle='#c4b5fd';cx.font='bold 36px monospace';cx.textAlign='center';cx.fillText('DRIFT',300,80);
+  // Tagline
+  cx.fillStyle='rgba(255,255,255,0.2)';cx.font='italic 12px monospace';cx.fillText('some dreams you have to fall through to wake up',300,105);
+  // Stats
+  cx.fillStyle='#fff';cx.font='bold 28px monospace';cx.fillText(timeStr,300,170);
+  cx.fillStyle='rgba(255,100,100,0.7)';cx.font='14px monospace';cx.fillText('✕ '+gs.deaths+' deaths',300,210);
+  cx.fillStyle='rgba(255,255,255,0.5)';cx.fillText('◈ '+gs.strawberriesCollected+'/'+gs.totalStrawberries+' memories',300,240);
+  // Challenge
+  cx.fillStyle='rgba(241,196,15,0.6)';cx.font='bold 14px monospace';cx.fillText('can you wake up faster?',300,310);
+  // Footer
+  cx.fillStyle='rgba(255,255,255,0.15)';cx.font='10px monospace';cx.fillText('drift — a dream platformer',300,370);
+  // Share
+  c.toBlob(function(blob){
+    if(navigator.share&&blob){
+      const file=new File([blob],'drift-score.png',{type:'image/png'});
+      navigator.share({title:'Drift',text:'I awakened in '+timeStr+' with '+gs.deaths+' deaths. Can you beat me?',files:[file]}).catch(()=>{})
+    }else{
+      // Fallback: copy text
+      const text='DRIFT — I awakened in '+timeStr+' with '+gs.deaths+' deaths and found '+gs.strawberriesCollected+'/'+gs.totalStrawberries+' memories. Can you wake up faster?';
+      try{navigator.clipboard?.writeText(text)}catch{}
+      alert('Score copied to clipboard!')
+    }
+  },'image/png');
+}
 
 // ─── Booster / Menu ───
 function activateBooster(){if(!gs)return;if(gs.activeBooster==="slowmo"&&gs.slowMoFrames<=0){gs.slowMoFrames=300;gs.activeBooster=null;sfx("buy")}if(gs.activeBooster==="checkpoint"&&!gs.checkpoint){gs.checkpoint={x:gs.player.x,y:gs.player.y};gs.activeBooster=null;sfx("buy")}}
