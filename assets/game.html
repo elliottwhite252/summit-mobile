@@ -65,7 +65,9 @@ canvas{display:block;position:absolute;top:0;left:0}
 
 <script>
 // ─── Constants ───
-const W=800,H=500,TILE=20,GRAVITY=0.55,MAX_FALL=8,PLAYER_SPEED=3.2,JUMP_FORCE=-9.5,JUMP_CUT=-3,WALL_SLIDE_SPEED=1.2,WALL_JUMP_H=5,WALL_JUMP_V=-9,DASH_SPEED=10,DASH_DURATION=8,DASH_COOLDOWN=4,COYOTE_FRAMES=6,JUMP_BUFFER_FRAMES=6,CRUMBLE_DELAY=18,CRUMBLE_RESPAWN=180,SPRING_FORCE=-13,PW=12,PH=16,HAIR_COUNT=5,HALF_GRAV_THRESHOLD=-2,CORNER_CORRECTION=4,WALL_JUMP_FORGIVENESS=4,DEFAULT_HAIR="#c4b5fd";
+// Dynamic game dimensions — match screen aspect ratio
+const screenR=Math.max(window.innerWidth,window.innerHeight)/Math.min(window.innerWidth,window.innerHeight);
+const W=Math.round(500*screenR),H=500,TILE=20,GRAVITY=0.55,MAX_FALL=8,PLAYER_SPEED=3.2,JUMP_FORCE=-9.5,JUMP_CUT=-3,WALL_SLIDE_SPEED=1.2,WALL_JUMP_H=5,WALL_JUMP_V=-9,DASH_SPEED=10,DASH_DURATION=8,DASH_COOLDOWN=4,COYOTE_FRAMES=6,JUMP_BUFFER_FRAMES=6,CRUMBLE_DELAY=18,CRUMBLE_RESPAWN=180,SPRING_FORCE=-13,PW=12,PH=16,HAIR_COUNT=5,HALF_GRAV_THRESHOLD=-2,CORNER_CORRECTION=4,WALL_JUMP_FORGIVENESS=4,DEFAULT_HAIR="#c4b5fd";
 
 // ─── Room Themes ───
 const ROOM_THEMES=[
@@ -91,8 +93,9 @@ const COSMETICS=[{id:"hair_blue",type:"hair",name:"Ocean Light",cost:10,color:"#
 const canvas=document.getElementById('c');const ctx=canvas.getContext('2d');
 let cw=window.innerWidth,ch=window.innerHeight;canvas.width=cw;canvas.height=ch;
 let ctrlH=75;
-function calcScale(){scale=Math.min(cw/W,(ch-ctrlH)/H);ox=(cw-W*scale)/2;oy=((ch-ctrlH)-H*scale)/2}
-let scale,ox,oy;calcScale();
+let scale,ox=0,oy=0;
+function calcScale(){scale=cw/W;ox=0;oy=0}
+calcScale();
 window.addEventListener('resize',()=>{cw=window.innerWidth;ch=window.innerHeight;canvas.width=cw;canvas.height=ch;calcScale()});
 
 // ─── Input ───
