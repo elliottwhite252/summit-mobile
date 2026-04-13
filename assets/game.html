@@ -29,17 +29,7 @@ canvas{display:block;position:absolute;top:0;left:0}
 </head><body>
 <canvas id="c"></canvas>
 
-<div id="overlay">
-<div style="text-align:center">
-<div style="font-size:40px;margin-bottom:12px;opacity:0.6">💭</div>
-<h1>DRIFT</h1>
-<div class="sub">some dreams you have to fall through to wake up</div>
-<button class="start-btn" id="startBtn">enter the dream</button>
-<div id="layerBtns" style="margin-top:10px;display:flex;gap:6px;justify-content:center"></div>
-<button class="start-btn" id="dailyBtn" style="margin-top:8px;background:rgba(241,196,15,0.1);border-color:rgba(241,196,15,0.3);color:#f1c40f;font-size:12px;padding:10px 20px">☀ daily dream</button>
-<div id="streakDisplay" style="margin-top:12px;font-size:10px;color:rgba(255,255,255,0.25)"></div>
-</div>
-</div>
+<div id="overlay" style="display:none"></div>
 
 <div id="controls" style="display:none">
 <div class="ctrl-bar">
@@ -192,9 +182,8 @@ function startDailyDream(){
     starterPackBought:save.starterPack,roomDeaths:0,offerBooster:null,transitionTimer:0,transitionDir:0,roomTitleTimer:90,
     speedrunTime:0,speedrunStart:performance.now(),memoriesFound:[],showingMemory:null,memoryTimer:0,
     dailyThemeIdx:themeIdx};
-  dailyMode=true;prevRoom=0;
+  dailyMode=true;prevRoom=0;menuState=null;
   if(loopId){cancelAnimationFrame(loopId);loopId=null}
-  document.getElementById('overlay').classList.add('hidden');document.getElementById('overlay').style.display='none';
   document.getElementById('controls').style.display='block';document.getElementById('winOverlay').style.display='none';
   showRoomTitle(themeIdx);startBGM();loop();
 }
@@ -432,7 +421,7 @@ function startGame(){
     starterPackBought:save.starterPack,roomDeaths:0,offerBooster:null,transitionTimer:0,transitionDir:0,roomTitleTimer:90,
     speedrunTime:0,speedrunStart:performance.now(),memoriesFound:[],showingMemory:null,memoryTimer:0};
   prevRoom=0;if(loopId){cancelAnimationFrame(loopId);loopId=null}
-  document.getElementById('overlay').classList.add('hidden');document.getElementById('overlay').style.display='none';
+  menuState=null;
   document.getElementById('controls').style.display='block';document.getElementById('winOverlay').style.display='none';
   document.getElementById('shop').classList.remove('visible');document.getElementById('offer').classList.remove('visible');
   showRoomTitle(0);startBGM();loop();
@@ -788,7 +777,7 @@ function shareCard(){
 // ─── Booster / Menu ───
 function activateBooster(){if(!gs)return;if(gs.activeBooster==="slowmo"&&gs.slowMoFrames<=0){gs.slowMoFrames=300;gs.activeBooster=null;sfx("buy")}if(gs.activeBooster==="checkpoint"&&!gs.checkpoint){gs.checkpoint={x:gs.player.x,y:gs.player.y};gs.activeBooster=null;sfx("buy")}}
 function updateBoosterBtn(){const btn=document.getElementById('boosterBtn');if(!btn||!gs)return;if(gs.activeBooster==="slowmo"&&gs.slowMoFrames<=0){btn.style.display='block';btn.querySelector('.btn').textContent='🕐'}else if(gs.activeBooster==="checkpoint"&&!gs.checkpoint){btn.style.display='block';btn.querySelector('.btn').textContent='🚩'}else{btn.style.display='none'}}
-function backToMenu(){if(!gs)return;stopBGM();gs=null;document.getElementById('overlay').classList.remove('hidden');document.getElementById('overlay').style.display='flex';document.getElementById('controls').style.display='none';document.getElementById('shop').classList.remove('visible')}
+function backToMenu(){if(!gs)return;stopBGM();gs=null;menuState="main";document.getElementById('controls').style.display='none';document.getElementById('shop').classList.remove('visible');menuLoop()}
 
 // ─── Loop ───
 let loopId=null;
@@ -798,7 +787,57 @@ document.addEventListener('touchstart',function initA(){initSfx();document.remov
 document.getElementById('sfxBtn').textContent=sfxMuted?'🔇':'🔊';
 document.getElementById('musBtn').textContent=musicMuted?'🔇':'🎵';
 
-// Button listeners (more reliable than inline handlers in WebView)
-document.getElementById('startBtn').addEventListener('pointerup',function(e){e.preventDefault();startGame()});
-document.getElementById('dailyBtn').addEventListener('pointerup',function(e){e.preventDefault();startDailyDream()});
+// ─── Canvas Menu ───
+let menuState="main"; // "main" or null (in game)
+
+function drawMenu(){
+  ctx.fillStyle="#0a0a12";ctx.fillRect(0,0,cw,ch);
+  ctx.save();ctx.translate(cw/2,ch/2-40);
+  // Title
+  ctx.fillStyle="#c4b5fd";ctx.font="bold 36px monospace";ctx.textAlign="center";
+  ctx.shadowColor="rgba(180,160,255,0.5)";ctx.shadowBlur=30;
+  ctx.fillText("DRIFT",0,-60);
+  ctx.shadowBlur=0;
+  // Tagline
+  ctx.fillStyle="rgba(255,255,255,0.25)";ctx.font="italic 11px monospace";
+  ctx.fillText("some dreams you have to fall through to wake up",0,-30);
+  // Enter button
+  ctx.fillStyle="rgba(180,160,255,0.15)";ctx.strokeStyle="rgba(180,160,255,0.3)";ctx.lineWidth=1;
+  ctx.beginPath();ctx.roundRect(-80,0,160,40,20);ctx.fill();ctx.stroke();
+  ctx.fillStyle="#c4b5fd";ctx.font="bold 14px monospace";ctx.fillText("enter the dream",0,25);
+  // Daily dream button
+  ctx.fillStyle="rgba(241,196,15,0.1)";ctx.strokeStyle="rgba(241,196,15,0.3)";
+  ctx.beginPath();ctx.roundRect(-70,55,140,35,15);ctx.fill();ctx.stroke();
+  ctx.fillStyle="#f1c40f";ctx.font="bold 12px monospace";ctx.fillText("☀ daily dream",0,78);
+  // Streak
+  const s=getStreak();
+  ctx.fillStyle="rgba(255,255,255,0.2)";ctx.font="10px monospace";
+  if(s.count>0)ctx.fillText("🔥 "+s.count+" day streak",0,115);
+  else ctx.fillText("play daily to build a streak",0,115);
+  // Layer indicator
+  const maxL=getDreamLayer();
+  ctx.fillStyle="rgba(255,255,255,0.15)";ctx.font="10px monospace";
+  const layerNames=["Dream","Nightmare","Abyss"];
+  ctx.fillText("layer: "+layerNames[currentLayer-1]+(maxL>1?" ("+maxL+" unlocked)":""),0,135);
+  ctx.textAlign="left";ctx.restore();
+}
+
+function menuLoop(){
+  if(menuState!=="main")return;
+  drawMenu();
+  requestAnimationFrame(menuLoop);
+}
+
+// Tap detection on canvas for menu buttons
+canvas.addEventListener('pointerup',function(e){
+  if(menuState!=="main")return;
+  const x=e.clientX-cw/2;const y=e.clientY-(ch/2-40);
+  // Enter the dream button: -80,0 to 80,40
+  if(x>=-80&&x<=80&&y>=0&&y<=40){startGame();return}
+  // Daily dream button: -70,55 to 70,90
+  if(x>=-70&&x<=70&&y>=55&&y<=90){startDailyDream();return}
+});
+
+// Start on menu
+menuState="main";menuLoop();
 </script></body></html>
