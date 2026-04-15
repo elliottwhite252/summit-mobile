@@ -65,18 +65,18 @@ const W=Math.min(900,Math.round(500*screenR)),H=500,TILE=20,GRAVITY=0.55,MAX_FAL
 
 // ─── Room Themes ───
 const ROOM_THEMES=[
-  {name:"Innocence",bg1:"#1a0f1e",bg2:"#2d1f3a",accent:"#f0c6d4",particle:"#f8b4c8",platColor:"rgba(240,198,212,0.2)",platEdge:"rgba(240,198,212,0.4)",spikeColor:"#8b3a5a",playerTint:"#f0c6d4"},
-  {name:"Wonder",bg1:"#1a1508",bg2:"#2d2510",accent:"#f0c040",particle:"#ffd700",platColor:"rgba(240,192,64,0.2)",platEdge:"rgba(240,192,64,0.4)",spikeColor:"#8b6914",playerTint:"#f0c040"},
-  {name:"Unease",bg1:"#1e1408",bg2:"#3a2510",accent:"#e0883a",particle:"#d4762a",platColor:"rgba(224,136,58,0.2)",platEdge:"rgba(224,136,58,0.4)",spikeColor:"#8b4513",playerTint:"#e0883a"},
-  {name:"Betrayal",bg1:"#1a0808",bg2:"#350a0a",accent:"#c03030",particle:"#ff4040",platColor:"rgba(192,48,48,0.15)",platEdge:"rgba(192,48,48,0.35)",spikeColor:"#8b0000",playerTint:"#c03030"},
-  {name:"Solitude",bg1:"#0c0e14",bg2:"#181c28",accent:"#7088a0",particle:"#5a7090",platColor:"rgba(112,136,160,0.2)",platEdge:"rgba(112,136,160,0.35)",spikeColor:"#3a4a5a",playerTint:"#7088a0"},
-  {name:"Resilience",bg1:"#081a10",bg2:"#0f2a18",accent:"#40b870",particle:"#30d060",platColor:"rgba(64,184,112,0.2)",platEdge:"rgba(64,184,112,0.4)",spikeColor:"#1a5c30",playerTint:"#40b870"},
-  {name:"Love",bg1:"#1a0820",bg2:"#2a1038",accent:"#c060d0",particle:"#e080f0",platColor:"rgba(192,96,208,0.2)",platEdge:"rgba(192,96,208,0.4)",spikeColor:"#6a2080",playerTint:"#c060d0"},
-  {name:"Confession",bg1:"#121218",bg2:"#1a1a28",accent:"#8080a0",particle:"#a0a0c0",platColor:"rgba(128,128,160,0.2)",platEdge:"rgba(128,128,160,0.35)",spikeColor:"#404060",playerTint:"#8080a0"},
-  {name:"Despair",bg1:"#050508",bg2:"#0a0a10",accent:"#304060",particle:"#202838",platColor:"rgba(48,64,96,0.15)",platEdge:"rgba(48,64,96,0.3)",spikeColor:"#1a2030",playerTint:"#304060"},
-  {name:"Defiance",bg1:"#200808",bg2:"#380808",accent:"#e04040",particle:"#ff6030",platColor:"rgba(224,64,64,0.2)",platEdge:"rgba(224,64,64,0.4)",spikeColor:"#a02020",playerTint:"#e04040"},
-  {name:"Release",bg1:"#141828",bg2:"#202840",accent:"#a0c0e0",particle:"#c0d8f0",platColor:"rgba(160,192,224,0.2)",platEdge:"rgba(160,192,224,0.4)",spikeColor:"#506080",playerTint:"#a0c0e0"},
-  {name:"Awakening",bg1:"#1a1a1a",bg2:"#2a2a2a",accent:"#e0e0e0",particle:"#ffffff",platColor:"rgba(224,224,224,0.2)",platEdge:"rgba(224,224,224,0.5)",spikeColor:"#808080",playerTint:"#e0e0e0"}
+  {name:"Innocence",bg1:"#1a0f1e",bg2:"#2d1f3a",accent:"#f0c6d4",particle:"#f8b4c8",platColor:"rgba(240,198,212,0.35)",platEdge:"rgba(240,198,212,0.6)",spikeColor:"#8b3a5a",playerTint:"#f0c6d4"},
+  {name:"Wonder",bg1:"#1a1508",bg2:"#2d2510",accent:"#f0c040",particle:"#ffd700",platColor:"rgba(240,192,64,0.35)",platEdge:"rgba(240,192,64,0.6)",spikeColor:"#8b6914",playerTint:"#f0c040"},
+  {name:"Unease",bg1:"#1e1408",bg2:"#3a2510",accent:"#e0883a",particle:"#d4762a",platColor:"rgba(224,136,58,0.35)",platEdge:"rgba(224,136,58,0.6)",spikeColor:"#8b4513",playerTint:"#e0883a"},
+  {name:"Betrayal",bg1:"#1a0808",bg2:"#350a0a",accent:"#c03030",particle:"#ff4040",platColor:"rgba(192,48,48,0.3)",platEdge:"rgba(192,48,48,0.55)",spikeColor:"#8b0000",playerTint:"#c03030"},
+  {name:"Solitude",bg1:"#0c0e14",bg2:"#181c28",accent:"#7088a0",particle:"#5a7090",platColor:"rgba(112,136,160,0.35)",platEdge:"rgba(112,136,160,0.55)",spikeColor:"#3a4a5a",playerTint:"#7088a0"},
+  {name:"Resilience",bg1:"#081a10",bg2:"#0f2a18",accent:"#40b870",particle:"#30d060",platColor:"rgba(64,184,112,0.35)",platEdge:"rgba(64,184,112,0.6)",spikeColor:"#1a5c30",playerTint:"#40b870"},
+  {name:"Love",bg1:"#1a0820",bg2:"#2a1038",accent:"#c060d0",particle:"#e080f0",platColor:"rgba(192,96,208,0.35)",platEdge:"rgba(192,96,208,0.6)",spikeColor:"#6a2080",playerTint:"#c060d0"},
+  {name:"Confession",bg1:"#121218",bg2:"#1a1a28",accent:"#8080a0",particle:"#a0a0c0",platColor:"rgba(128,128,160,0.4)",platEdge:"rgba(128,128,160,0.65)",spikeColor:"#404060",playerTint:"#8080a0"},
+  {name:"Despair",bg1:"#050508",bg2:"#0a0a10",accent:"#304060",particle:"#202838",platColor:"rgba(48,64,96,0.4)",platEdge:"rgba(48,64,96,0.6)",spikeColor:"#1a2030",playerTint:"#304060"},
+  {name:"Defiance",bg1:"#200808",bg2:"#380808",accent:"#e04040",particle:"#ff6030",platColor:"rgba(224,64,64,0.35)",platEdge:"rgba(224,64,64,0.6)",spikeColor:"#a02020",playerTint:"#e04040"},
+  {name:"Release",bg1:"#141828",bg2:"#202840",accent:"#a0c0e0",particle:"#c0d8f0",platColor:"rgba(160,192,224,0.35)",platEdge:"rgba(160,192,224,0.6)",spikeColor:"#506080",playerTint:"#a0c0e0"},
+  {name:"Awakening",bg1:"#1a1a1a",bg2:"#2a2a2a",accent:"#e0e0e0",particle:"#ffffff",platColor:"rgba(224,224,224,0.35)",platEdge:"rgba(224,224,224,0.7)",spikeColor:"#808080",playerTint:"#e0e0e0"}
 ];
 
 const BOOSTERS=[{id:"checkpoint",name:"Checkpoint",cost:5,desc:"Place a mid-room respawn",icon:"🚩"},{id:"slowmo",name:"Slow-Mo",cost:3,desc:"50% speed for 5 sec",icon:"🕐"},{id:"shield",name:"Air Shield",cost:8,desc:"Survive one spike hit",icon:"🛡️"},{id:"doubleDash",name:"Double Dash",cost:10,desc:"Two air dashes",icon:"💨"},{id:"springBoost",name:"Spring+",cost:3,desc:"Springs launch higher",icon:"🚀"}];
