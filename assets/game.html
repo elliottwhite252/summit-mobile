@@ -7,14 +7,22 @@
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden;background:#0a0a12;touch-action:none;user-select:none;-webkit-user-select:none}
 canvas{display:block;position:absolute;top:0;left:0}
-.ctrl-bar{position:fixed;bottom:0;left:0;width:100%;height:80px;background:rgba(10,10,18,0.95);display:flex;align-items:center;justify-content:space-between;padding:0 10px;z-index:10}
-.ctrl{display:flex;align-items:center;gap:8px}
-.btn{width:56px;height:56px;border-radius:28px;border:2px solid rgba(255,255,255,0.15);background:rgba(255,255,255,0.04);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.5);font:bold 11px monospace}
-.btn-jump{border-color:rgba(180,160,255,0.4);background:rgba(180,160,255,0.08)}
-.btn-dash{border-color:rgba(255,180,200,0.4);background:rgba(255,180,200,0.08)}
-.btn-sq{border-radius:12px;width:52px;height:52px}
-.shop-btn{padding:4px 10px;border-radius:4px;background:rgba(241,196,15,0.1);border:1px solid rgba(241,196,15,0.2);color:#f1c40f;font:bold 10px monospace}
-.mute-btn{font-size:16px;padding:4px;background:none;border:none}
+/* D-pad */
+.dpad{position:fixed;bottom:15px;left:15px;z-index:10;width:130px;height:130px}
+.dpad-btn{position:absolute;width:44px;height:44px;border-radius:8px;background:rgba(255,255,255,0.08);border:2px solid rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,0.5);font-size:18px}
+.dpad-up{top:0;left:43px}
+.dpad-down{bottom:0;left:43px}
+.dpad-left{top:43px;left:0}
+.dpad-right{top:43px;right:0}
+.dpad-center{top:43px;left:43px;background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.06)}
+/* Action buttons */
+.action-btns{position:fixed;bottom:15px;right:15px;z-index:10}
+.btn-jump{position:absolute;bottom:0;right:0;width:72px;height:72px;border-radius:36px;border:2px solid rgba(180,160,255,0.35);background:rgba(180,160,255,0.1);display:flex;align-items:center;justify-content:center;color:rgba(180,160,255,0.7);font:bold 12px monospace}
+.btn-dash{position:absolute;bottom:55px;right:60px;width:56px;height:56px;border-radius:28px;border:2px solid rgba(255,180,200,0.35);background:rgba(255,180,200,0.1);display:flex;align-items:center;justify-content:center;color:rgba(255,180,200,0.7);font:bold 11px monospace}
+/* Top bar */
+.top-bar{position:fixed;top:8px;right:10px;z-index:10;display:flex;gap:6px;align-items:center}
+.shop-btn{padding:4px 10px;border-radius:4px;background:rgba(241,196,15,0.08);border:1px solid rgba(241,196,15,0.15);color:rgba(241,196,15,0.7);font:bold 10px monospace}
+.mute-btn{font-size:14px;padding:4px;background:none;border:none;opacity:0.4}
 #overlay{position:fixed;top:0;left:0;width:100%;height:100%;z-index:20;display:flex;align-items:center;justify-content:center;background:rgba(10,10,18,0.92);font-family:monospace;color:#fff}
 #overlay.hidden{display:none}
 #overlay h1{font-size:36px;color:#c4b5fd;letter-spacing:8px;text-shadow:0 0 30px rgba(180,160,255,0.5)}
@@ -32,23 +40,28 @@ canvas{display:block;position:absolute;top:0;left:0}
 <div id="overlay" style="display:none"></div>
 
 <div id="controls" style="display:none">
-<div class="ctrl-bar">
-<div class="ctrl" style="gap:16px">
-<div class="btn btn-sq" style="width:60px;height:60px" ontouchstart="inp.left=true" ontouchend="inp.left=false">◀</div>
-<div class="btn btn-sq" style="width:60px;height:60px" ontouchstart="inp.right=true" ontouchend="inp.right=false">▶</div>
+<!-- Cross D-pad -->
+<div class="dpad">
+<div class="dpad-btn dpad-up" ontouchstart="inp.up=true" ontouchend="inp.up=false">▲</div>
+<div class="dpad-btn dpad-down" ontouchstart="inp.down=true" ontouchend="inp.down=false">▼</div>
+<div class="dpad-btn dpad-left" ontouchstart="inp.left=true" ontouchend="inp.left=false">◀</div>
+<div class="dpad-btn dpad-right" ontouchstart="inp.right=true" ontouchend="inp.right=false">▶</div>
+<div class="dpad-btn dpad-center"></div>
 </div>
-<div class="ctrl" style="gap:6px">
-<div id="boosterBtn" style="display:none"><div class="btn" style="width:40px;height:40px;border-radius:20px;border-color:rgba(241,196,15,0.4);background:rgba(241,196,15,0.08);font-size:16px" ontouchstart="activateBooster()">⚡</div></div>
+<!-- Action buttons -->
+<div class="action-btns">
+<div class="btn-jump" ontouchstart="inp.jump=true;inp.jjp=true" ontouchend="inp.jump=false">JUMP</div>
+<div class="btn-dash" ontouchstart="inp.dash=true" ontouchend="inp.dash=false">DASH</div>
+</div>
+<!-- Booster button -->
+<div id="boosterBtn" style="display:none;position:fixed;bottom:130px;right:25px;z-index:10"><div style="width:44px;height:44px;border-radius:22px;border:2px solid rgba(241,196,15,0.3);background:rgba(241,196,15,0.08);display:flex;align-items:center;justify-content:center;font-size:18px" ontouchstart="activateBooster()">⚡</div></div>
+<!-- Top right bar -->
+<div class="top-bar">
 <button class="mute-btn" id="sfxBtn" ontouchstart="toggleSfx()">🔊</button>
 <button class="mute-btn" id="musBtn" ontouchstart="toggleMus()">🎵</button>
-<button class="shop-btn" ontouchstart="openShop()">🪙 SHOP</button>
-<button class="shop-btn" ontouchstart="openJournal()" style="background:rgba(180,160,255,0.08);border-color:rgba(180,160,255,0.2);color:#c4b5fd">◈</button>
-<button class="shop-btn" ontouchstart="backToMenu()" style="background:rgba(255,255,255,0.03);border-color:rgba(255,255,255,0.08);color:#666">☰</button>
-</div>
-<div class="ctrl" style="gap:12px">
-<div class="btn btn-dash" style="width:60px;height:60px" ontouchstart="inp.dash=true" ontouchend="inp.dash=false">DASH</div>
-<div class="btn btn-jump" style="width:60px;height:60px" ontouchstart="inp.jump=true;inp.jjp=true" ontouchend="inp.jump=false">JUMP</div>
-</div>
+<button class="shop-btn" ontouchstart="openShop()">🪙</button>
+<button class="shop-btn" ontouchstart="openJournal()" style="background:rgba(180,160,255,0.06);border-color:rgba(180,160,255,0.15);color:rgba(180,160,255,0.5)">◈</button>
+<button class="shop-btn" ontouchstart="backToMenu()" style="background:rgba(255,255,255,0.02);border-color:rgba(255,255,255,0.06);color:rgba(255,255,255,0.3)">☰</button>
 </div>
 </div>
 
@@ -86,13 +99,11 @@ const COSMETICS=[{id:"hair_blue",type:"hair",name:"Ocean Light",cost:10,color:"#
 // ─── Canvas ───
 const canvas=document.getElementById('c');const ctx=canvas.getContext('2d');
 let cw=window.innerWidth,ch=window.innerHeight;canvas.width=cw;canvas.height=ch;
-let ctrlH=80;
 let scale,ox=0,oy=0;
 function calcScale(){
-  const availH=ch-ctrlH;
-  scale=Math.min(cw/W,availH/H);
+  scale=Math.min(cw/W,ch/H);
   ox=(cw-W*scale)/2;
-  oy=(availH-H*scale)/2;
+  oy=(ch-H*scale)/2;
 }
 calcScale();
 window.addEventListener('resize',()=>{cw=window.innerWidth;ch=window.innerHeight;canvas.width=cw;canvas.height=ch;calcScale()});
