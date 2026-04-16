@@ -7,7 +7,7 @@ import mobileAds, {
 } from "react-native-google-mobile-ads";
 
 // Use test IDs in dev, real IDs in production
-const USE_TEST_ADS = true; // Set to false for production
+const USE_TEST_ADS = false; // Production — real ads
 
 const INTERSTITIAL_ID = USE_TEST_ADS
   ? TestIds.INTERSTITIAL
