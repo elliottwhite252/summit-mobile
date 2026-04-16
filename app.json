@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.summit-mobile",
+      "bundleIdentifier": "com.elliottwhite.drift",
       "infoPlist": {
         "GADApplicationIdentifier": "ca-app-pub-4673214616192353~3200623455",
         "SKAdNetworkItems": [
