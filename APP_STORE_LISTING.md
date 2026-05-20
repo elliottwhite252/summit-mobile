@@ -7,41 +7,42 @@ Drift - Dream Platformer
 Precision Platformer Adventure
 
 ## Promotional Text (170 chars, can change anytime)
-New: Daily Dream challenges, 3 difficulty layers, and 10 achievements. How fast can you wake up?
+17 rooms. one story. one way out. a precision platformer in the spirit of Celeste.
 
 ## Description
-12 dream rooms. 12 emotions. One story told through memories you collect.
-
-Precision platformer with wall-jump, air-dash, and speedrun timer. A new daily challenge every day. Free to play.
+A precision platformer about leaving a house full of clocks. Free to play.
 
 If you loved Celeste, Journey, or Gris — this is your next obsession.
 
-You are a light drifting through someone's dream. Each room shifts — from the soft pink of Innocence to the dark void of Despair. Collect memory fragments to piece together why she's lost.
+She grew up in a house where the clocks didn't tick in time. Where the wallpaper breathed. Where mirrors stopped agreeing.
+
+The story starts small — a man at the table, a hallway that grew longer when she was alone in it — and ends with every clock in the house stopping.
+
+You play as the version of her that walked out.
 
 FEATURES
-• 12 unique rooms — each with its own mood, color palette, and music
+• 17 hand-built rooms — each its own mood, palette, and score
 • Precision mechanics: wall slide, wall jump, air dash, coyote time
-• Story told through collectible memory fragments
-• Daily Dream: a new room every day — same for all players
-• Dream Streak: play daily for increasing rewards
+• A story told one memory at a time
+• Daily Dream — a new room every day, same seed for every player
 • 3 Dream Layers: beat the game to unlock Nightmare and Abyss
-• 10 achievements to unlock
-• Speedrun timer with personal best leaderboard
+• 10 achievements
+• Speedrun timer
 • Shop with boosters and cosmetic effects
-• Haptic feedback on every action
-• Original soundtrack that shifts with each room's emotion
+• Original soundtrack that shifts with the room
+• Free to play, no required purchases
 
-"some dreams you have to fall through to wake up"
+"the house tried to swallow the sound. it could not."
 
 ## Keywords (100 chars, no spaces after commas)
-platformer,dream,dash,walljump,indie,speedrun,arcade,runner,obstacle,celeste,difficult,retro,pixel,glow,memory,emotional
+platformer,dash,walljump,indie,speedrun,arcade,celeste,difficult,retro,pixel,memory,narrative,story
 
 ## Category
 Primary: Games > Action
 Secondary: Games > Adventure
 
 ## Age Rating
-4+
+17+ (themes of childhood adversity / implied violence — set via questionnaire: Infrequent/Mild Mature/Suggestive Themes; consider Frequent/Intense if reviewer flags)
 
 ## Price
 Free
@@ -60,17 +61,17 @@ https://github.com/elliottwhite252/summit-mobile/issues
 
 ## Screenshot Order (landscape)
 1. Gameplay action — player dashing over thorns with particles
-   Banner: "12 DREAM ROOMS, 12 EMOTIONS"
+   Banner: "17 ROOMS. ONE WAY OUT."
 2. Room mood contrast — Betrayal (red) vs Love (purple)
-   Banner: "EVERY ROOM IS A DIFFERENT FEELING"
+   Banner: "EVERY ROOM IS A DIFFERENT MEMORY"
 3. Story fragment appearing on screen
-   Banner: "COLLECT MEMORIES, UNCOVER THE STORY"
+   Banner: "PIECE TOGETHER WHAT HAPPENED"
 4. Shop/cosmetics screen
    Banner: "CUSTOMIZE YOUR LIGHT"
 5. Win screen with speedrun stats
    Banner: "DAILY CHALLENGES & SPEEDRUN TIMER"
 6. Title screen
-   Banner: "DRIFT — A DREAM YOU FALL THROUGH"
+   Banner: "DRIFT — A HOUSE FULL OF CLOCKS"
 
 ## Screenshot Sizes Needed
 - 6.7" iPhone: 2796 x 1290 (landscape)

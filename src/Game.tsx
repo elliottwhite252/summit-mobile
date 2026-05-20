@@ -1,16 +1,43 @@
 import React, { useRef, useCallback, useEffect } from "react";
 import { View, StyleSheet, Dimensions } from "react-native";
 import { WebView } from "react-native-webview";
-import { Asset } from "expo-asset";
 import { showInterstitial, showRewarded, initAds } from "./ads";
+import {
+  initIAP,
+  purchase,
+  restore,
+  setPurchaseCallbacks,
+  type ProductId,
+} from "./iap";
 
 const { width: SCREEN_W, height: SCREEN_H } = Dimensions.get("window");
+
+// Escape a string for safe injection into a JS string literal
+function jsStr(s: string) {
+  return JSON.stringify(s);
+}
 
 export default function Game() {
   const webViewRef = useRef<WebView>(null);
 
   useEffect(() => {
     initAds();
+
+    // Wire IAP callbacks → forward results back into the WebView
+    setPurchaseCallbacks(
+      (productId) => {
+        webViewRef.current?.injectJavaScript(
+          `window.onPurchaseSuccess && window.onPurchaseSuccess(${jsStr(productId)}); true;`
+        );
+      },
+      (productId, message) => {
+        webViewRef.current?.injectJavaScript(
+          `window.onPurchaseFailed && window.onPurchaseFailed(${jsStr(productId ?? "")}, ${jsStr(message)}); true;`
+        );
+      }
+    );
+
+    initIAP();
   }, []);
 
   const onMessage = useCallback((event: any) => {
@@ -23,6 +50,14 @@ export default function Game() {
           // Send coins back to the WebView
           webViewRef.current?.injectJavaScript(
             "window.onRewardedAdComplete && window.onRewardedAdComplete(); true;"
+          );
+        });
+      } else if (data.type === "purchase") {
+        purchase(data.productId as ProductId);
+      } else if (data.type === "restorePurchases") {
+        restore().then((restored) => {
+          webViewRef.current?.injectJavaScript(
+            `window.onRestoreComplete && window.onRestoreComplete(${JSON.stringify(restored)}); true;`
           );
         });
       }
