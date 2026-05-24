@@ -22,17 +22,14 @@ let initialized = false;
 
 export async function initAds() {
   if (initialized) return;
-  // Delay initialization so it doesn't block app startup
-  setTimeout(async () => {
-    try {
-      await mobileAds().initialize();
-      initialized = true;
-      loadInterstitial();
-      loadRewarded();
-    } catch (e) {
-      console.log("AdMob init failed:", e);
-    }
-  }, 3000);
+  try {
+    await mobileAds().initialize();
+    initialized = true;
+    loadInterstitial();
+    loadRewarded();
+  } catch (e) {
+    console.log("AdMob init failed:", e);
+  }
 }
 
 // ─── Interstitial ────────────────────────────────────────────────────────────
@@ -107,15 +104,30 @@ function loadRewarded() {
 }
 
 export function showRewarded(onReward: () => void): boolean {
-  if (!rewardedLoaded || !rewardedAd) return false;
+  // Always grant the reward — never leave the user with a dead button.
+  // Apple 2.1 rejects rewarded-ad surfaces that silently fail when no fill.
+  let granted = false;
+  const grantOnce = () => {
+    if (granted) return;
+    granted = true;
+    onReward();
+  };
+
+  if (!rewardedLoaded || !rewardedAd) {
+    grantOnce();
+    if (initialized) loadRewarded();
+    return false;
+  }
+
   try {
-    rewardedAd.addAdEventListener(RewardedAdEventType.EARNED_REWARD, () => {
-      onReward();
-    });
+    rewardedAd.addAdEventListener(RewardedAdEventType.EARNED_REWARD, grantOnce);
+    rewardedAd.addAdEventListener(AdEventType.CLOSED, grantOnce);
+    rewardedAd.addAdEventListener(AdEventType.ERROR, grantOnce);
     rewardedAd.show();
     rewardedLoaded = false;
     return true;
   } catch {
+    grantOnce();
     return false;
   }
 }
