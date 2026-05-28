@@ -1,6 +1,7 @@
 import React, { useRef, useCallback, useEffect } from "react";
 import { View, StyleSheet, Dimensions } from "react-native";
 import { WebView } from "react-native-webview";
+import { Audio } from "expo-av";
 import { showInterstitial, showRewarded, initAds } from "./ads";
 import {
   initIAP,
@@ -21,6 +22,13 @@ export default function Game() {
   const webViewRef = useRef<WebView>(null);
 
   useEffect(() => {
+    // Configure iOS audio session so WebView audio plays through
+    // the silent ringer switch (default WKWebView audio is muted by it)
+    Audio.setAudioModeAsync({
+      playsInSilentModeIOS: true,
+      staysActiveInBackground: false,
+    }).catch(() => {});
+
     initAds();
 
     // Wire IAP callbacks → forward results back into the WebView

@@ -304,7 +304,10 @@ function createRooms(){const T=TILE;return[
 {platforms:[{x:0,y:H-T,w:W,h:T},{x:0,y:0,w:T,h:H},{x:W-T,y:0,w:T,h:H},{x:0,y:0,w:W,h:T},{x:100,y:400,w:80,h:T},{x:250,y:330,w:80,h:T},{x:400,y:260,w:80,h:T},{x:550,y:190,w:80,h:T},{x:650,y:120,w:130,h:T}],spikes:[{x:200,y:H-T,dir:"up"},{x:220,y:H-T,dir:"up"},{x:350,y:H-T,dir:"up"},{x:370,y:H-T,dir:"up"},{x:500,y:H-T,dir:"up"},{x:520,y:H-T,dir:"up"}],strawberries:[{x:420,y:230,collected:false},{x:710,y:95,collected:false}],springs:[],crumbles:[],spawn:{x:50,y:H-T-PH-2},exitX:W-T-PW-2}
 ]}
 // ─── Audio (same system) ───
-let audioCtx=null;function getAC(){if(!audioCtx)audioCtx=new AudioContext();return audioCtx}
+let audioCtx=null,audioUnlocked=false;
+function getAC(){if(!audioCtx)audioCtx=new(window.AudioContext||window.webkitAudioContext)();if(audioCtx.state==='suspended')audioCtx.resume().catch(()=>{});return audioCtx}
+function unlockAudio(){if(audioUnlocked)return;try{const c=getAC(),b=c.createBuffer(1,1,22050),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0);audioUnlocked=true;['touchstart','touchend','mousedown','keydown','click'].forEach(e=>document.removeEventListener(e,unlockAudio))}catch{}}
+['touchstart','touchend','mousedown','keydown','click'].forEach(e=>document.addEventListener(e,unlockAudio,{passive:true}));
 const sfxBufs={};const sfxCD={};
 function genSfx(type,sr){const sq=(t,f)=>Math.sin(2*Math.PI*f*t)>0?1:-1;const sn=(t,f)=>Math.sin(2*Math.PI*f*t);const lr=(a,b,p)=>a+(b-a)*p;const ns=()=>Math.random()*2-1;
 switch(type){case"jump":{const d=.1,s=new Float32Array(sr*d|0);for(let i=0;i<s.length;i++){const t=i/sr;s[i]=sq(t,lr(280,560,t/d))*(1-t/d)*.3}return s}
