@@ -823,7 +823,7 @@ function shareCard(){
 
 // ─── Booster / Menu ───
 function activateBooster(){if(!gs)return;if(gs.activeBooster==="slowmo"&&gs.slowMoFrames<=0){gs.slowMoFrames=300;gs.activeBooster=null;sfx("buy")}if(gs.activeBooster==="checkpoint"&&!gs.checkpoint){gs.checkpoint={x:gs.player.x,y:gs.player.y};gs.activeBooster=null;sfx("buy")}}
-function updateBoosterBtn(){const btn=document.getElementById('boosterBtn');if(!btn||!gs)return;if(gs.activeBooster==="slowmo"&&gs.slowMoFrames<=0){btn.style.display='block';btn.querySelector('.btn').textContent='🕐'}else if(gs.activeBooster==="checkpoint"&&!gs.checkpoint){btn.style.display='block';btn.querySelector('.btn').textContent='🚩'}else{btn.style.display='none'}}
+function updateBoosterBtn(){const btn=document.getElementById('boosterBtn');if(!btn||!gs)return;const inner=btn.firstElementChild;if(gs.activeBooster==="slowmo"&&gs.slowMoFrames<=0){btn.style.display='block';if(inner)inner.textContent='🕐'}else if(gs.activeBooster==="checkpoint"&&!gs.checkpoint){btn.style.display='block';if(inner)inner.textContent='🚩'}else{btn.style.display='none'}}
 function backToMenu(){if(!gs)return;stopBGM();gs=null;menuState="main";document.getElementById('controls').style.display='none';document.getElementById('shop').classList.remove('visible');menuLoop()}
 
 // ─── Loop ───
